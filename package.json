@@ -1,0 +1,26 @@
+{
+  "name": "ynvio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+     "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm start --prefix server",
+    "dev": "concurrently -n CLIENT,SERVER -c cyan,magenta \"npm run dev:client\" \"npm run dev:server\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marphco/ynvio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marphco/ynvio/issues"
+  },
+  "homepage": "https://github.com/marphco/ynvio#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
