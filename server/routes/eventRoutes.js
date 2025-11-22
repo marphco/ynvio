@@ -3,25 +3,60 @@ import Event from "../models/Event.js";
 
 const router = express.Router();
 
+// funzione helper per creare slug da una stringa
+const slugify = (str) => {
+  return str
+    .toString()
+    .normalize("NFD") // rimuove accenti
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-") // tutto ciò che non è a-z0-9 diventa -
+    .replace(/^-+|-+$/g, ""); // rimuove trattini iniziali/finali
+};
+
 // POST /api/events  -> crea un nuovo evento
 router.post("/", async (req, res) => {
   try {
-    const { title, slug, date, templateId, blocks } = req.body;
+    const { title, date, dateTBD, templateId, blocks } = req.body;
 
-    if (!title || !slug) {
-      return res.status(400).json({ message: "title e slug sono obbligatori" });
+    if (!title) {
+      return res.status(400).json({ message: "title è obbligatorio" });
     }
 
-    const existing = await Event.findOne({ slug });
-    if (existing) {
-      return res.status(409).json({ message: "Slug già usato da un altro evento" });
+    // baseSlug generato dal titolo (+ data se presente)
+    let baseSlug = slugify(title);
+    if (!baseSlug) {
+      baseSlug = "evento";
+    }
+
+    if (date && !dateTBD) {
+      const d = new Date(date);
+      if (!Number.isNaN(d.getTime())) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        baseSlug = `${baseSlug}-${yyyy}${mm}${dd}`;
+      }
+    }
+
+    // trova uno slug libero: /slug, /slug-2, /slug-3, ecc.
+    let slug = baseSlug;
+    let counter = 1;
+
+    // finché esiste un evento con questo slug, incrementiamo il numero
+    while (await Event.exists({ slug })) {
+      counter += 1;
+      slug = `${baseSlug}-${counter}`;
     }
 
     const event = await Event.create({
       title,
       slug,
-      date,
+      date: dateTBD ? null : date,
+      dateTBD: !!dateTBD,
       templateId: templateId || "basic-free",
+      status: "draft",
       blocks: blocks || [],
     });
 
@@ -54,19 +89,28 @@ router.get("/:slug", async (req, res) => {
 router.put("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
-    const { title, date, templateId, status, blocks } = req.body;
+    const { title, date, dateTBD, templateId, status, blocks } = req.body;
 
-    const event = await Event.findOneAndUpdate(
-      { slug },
-      {
-        ...(title && { title }),
-        ...(date && { date }),
-        ...(templateId && { templateId }),
-        ...(status && { status }),
-        ...(blocks && { blocks }),
-      },
-      { new: true }
-    );
+    const update = {
+      ...(title !== undefined && { title }),
+      ...(templateId !== undefined && { templateId }),
+      ...(status !== undefined && { status }),
+      ...(blocks !== undefined && { blocks }),
+    };
+
+    // gestione data / TBD
+    if (dateTBD === true) {
+      update.dateTBD = true;
+      update.date = null;
+    } else if (dateTBD === false) {
+      update.dateTBD = false;
+      update.date = date || null;
+    } else if (date) {
+      update.dateTBD = false;
+      update.date = date;
+    }
+
+    const event = await Event.findOneAndUpdate({ slug }, update, { new: true });
 
     if (!event) {
       return res.status(404).json({ message: "Evento non trovato" });

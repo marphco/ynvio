@@ -15,6 +15,7 @@ const EventSchema = new mongoose.Schema(
     title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     date: { type: Date },
+    dateTBD: { type: Boolean, default: false },
     templateId: { type: String, default: "basic-free" },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     blocks: { type: [BlockSchema], default: [] },

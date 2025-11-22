@@ -113,7 +113,8 @@ export default function EventEditor() {
         },
         body: JSON.stringify({
           title: event.title,
-          date: event.date,
+          date: event.date, // può essere null
+          dateTBD: event.dateTBD, // 👈 AGGIUNGI QUESTA
           templateId: event.templateId,
           status: event.status,
           blocks,
@@ -141,6 +142,40 @@ export default function EventEditor() {
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>Editor: {event.title}</h1>
+
+      <label style={{ display: "block", margin: "1rem 0" }}>
+        Data evento
+        <input
+          type="date"
+          disabled={event.dateTBD}
+          value={event.date ? event.date.slice(0, 10) : ""}
+          onChange={(e) =>
+            setEvent((prev) => ({
+              ...prev,
+              date: e.target.value
+                ? new Date(e.target.value).toISOString()
+                : null,
+              dateTBD: false,
+            }))
+          }
+          style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+        />
+      </label>
+
+      <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <input
+          type="checkbox"
+          checked={event.dateTBD}
+          onChange={(e) =>
+            setEvent((prev) => ({
+              ...prev,
+              dateTBD: e.target.checked,
+              date: e.target.checked ? null : prev.date,
+            }))
+          }
+        />
+        Data da definire
+      </label>
 
       <button
         onClick={addTextBlock}
