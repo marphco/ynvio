@@ -71,6 +71,10 @@ export default function EventPublic() {
   if (loading) return <p>Caricamento...</p>;
   if (!event) return <p>Evento non trovato.</p>;
 
+  const orderedBlocks = [...(event.blocks || [])].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
+
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>{event.title}</h1>
@@ -88,8 +92,8 @@ export default function EventPublic() {
       ) : null}
       <hr />
 
-      {event.blocks && event.blocks.length > 0 ? (
-        event.blocks.map((block) => {
+      {orderedBlocks.length > 0 ? (
+        orderedBlocks.map((block) => {
           // ✅ BLOCCO TESTO
           if (block.type === "text") {
             return (
