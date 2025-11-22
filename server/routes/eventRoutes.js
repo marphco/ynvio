@@ -67,6 +67,18 @@ router.post("/", async (req, res) => {
   }
 });
 
+// GET /api/events -> lista tutti gli eventi (per ora senza auth)
+router.get("/", async (req, res) => {
+  try {
+    const events = await Event.find().sort({ createdAt: -1 });
+    res.json(events);
+  } catch (error) {
+    console.error("Errore lista eventi:", error.message);
+    res.status(500).json({ message: "Errore del server" });
+  }
+});
+
+
 // GET /api/events/:slug  -> recupera un evento pubblico per slug
 router.get("/:slug", async (req, res) => {
   try {
