@@ -90,6 +90,7 @@ export default function EventPublic() {
 
       {event.blocks && event.blocks.length > 0 ? (
         event.blocks.map((block) => {
+          // ✅ BLOCCO TESTO
           if (block.type === "text") {
             return (
               <section key={block.id} style={{ margin: "1.5rem 0" }}>
@@ -103,37 +104,112 @@ export default function EventPublic() {
             );
           }
 
+          // ✅ BLOCCO MAPPA (con preview iframe)
           if (block.type === "map") {
+            const title = block.props?.title || "";
             const address = block.props?.address || "";
-            const title = block.props?.title || "Come arrivare";
+            const mapUrl = block.props?.mapUrl || "";
 
-            const query = encodeURIComponent(address);
-            const href =
-              block.props?.mapUrl ||
-              (query
-                ? `https://www.google.com/maps/search/?api=1&query=${query}`
-                : null);
+            // fallback link Google Maps da indirizzo
+            const fallbackUrl = address
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  address
+                )}`
+              : "";
+
+            const finalUrl = mapUrl || fallbackUrl;
+
+            // URL per iframe embed (usa sempre l'indirizzo, che è la cosa più stabile)
+            const embedUrl = address
+              ? `https://www.google.com/maps?q=${encodeURIComponent(
+                  address
+                )}&output=embed`
+              : "";
 
             return (
-              <section key={block.id} style={{ margin: "1.5rem 0" }}>
+              <section
+                key={block.id}
+                style={{
+                  margin: "1.5rem 0",
+                  padding: "1rem",
+                  border: "1px solid #333",
+                  borderRadius: "10px",
+                  background: "#161616",
+                  color: "#fff",
+                }}
+              >
                 <h2 style={{ marginBottom: "0.5rem" }}>{title}</h2>
 
-                {address && <p style={{ opacity: 0.9 }}>{address}</p>}
+                {address && (
+                  <p style={{ marginBottom: "0.75rem", opacity: 0.9 }}>
+                    📍 {address}
+                  </p>
+                )}
 
-                {href && (
+                {/* Preview mappa */}
+                {embedUrl ? (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "220px",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      border: "1px solid #2a2a2a",
+                      marginBottom: "0.75rem",
+                    }}
+                  >
+                    <iframe
+                      title={`map-${block.id}`}
+                      src={embedUrl}
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                ) : (
+                  <p style={{ opacity: 0.7 }}>Indirizzo non disponibile.</p>
+                )}
+
+                {/* Bottone */}
+                {finalUrl && (
                   <a
-                    href={href}
+                    href={finalUrl}
                     target="_blank"
                     rel="noreferrer"
                     style={{
                       display: "inline-block",
-                      marginTop: "0.5rem",
-                      textDecoration: "underline",
+                      padding: "0.6rem 0.9rem",
+                      borderRadius: "6px",
+                      background: "#000",
+                      color: "#fff",
+                      textDecoration: "none",
+                      fontSize: "0.95rem",
                     }}
                   >
-                    Apri su Google Maps →
+                    Apri su Google Maps
                   </a>
                 )}
+              </section>
+            );
+          }
+
+          // ✅ BLOCCO GALLERY (placeholder MVP)
+          if (block.type === "gallery") {
+            return (
+              <section
+                key={block.id}
+                style={{
+                  margin: "1.5rem 0",
+                  padding: "1rem",
+                  border: "1px dashed #999",
+                  borderRadius: "8px",
+                  opacity: 0.7,
+                }}
+              >
+                <h2 style={{ marginBottom: "0.5rem" }}>Gallery</h2>
+                <p>Contenuto premium. Disponibile prossimamente.</p>
               </section>
             );
           }

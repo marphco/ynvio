@@ -116,7 +116,7 @@ export default function EventEditor() {
         type: "map",
         order: prev.length,
         props: {
-          title: "Come arrivare",
+          title: "",
           address: "",
           mapUrl: "", // link google maps opzionale
         },
