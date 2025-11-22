@@ -2,21 +2,22 @@ import mongoose from "mongoose";
 
 const BlockSchema = new mongoose.Schema(
   {
-    type: { type: String, required: true }, // es: "hero", "text", "image", "map", "rsvp"
+    id: { type: String, required: true },              // 👈 AGGIUNTO
+    type: { type: String, required: true },            // es: "text", "image", "map", "rsvp"
     order: { type: Number, required: true },
-    props: { type: mongoose.Schema.Types.Mixed, default: {} }, // contenuto del blocco
+    props: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { _id: false }
 );
 
 const EventSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },        // es: "Matrimonio Luca & Sara"
-    slug: { type: String, required: true, unique: true }, // es: "luca-sara-2025"
-    date: { type: Date },                           // opzionale per ora
+    title: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    date: { type: Date },
     templateId: { type: String, default: "basic-free" },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
-    blocks: { type: [BlockSchema], default: [] },   // i blocchi della pagina
+    blocks: { type: [BlockSchema], default: [] },
   },
   { timestamps: true }
 );

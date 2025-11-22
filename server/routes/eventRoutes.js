@@ -50,4 +50,51 @@ router.get("/:slug", async (req, res) => {
   }
 });
 
+// PUT /api/events/:slug -> aggiorna un evento (es. blocchi)
+router.put("/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { title, date, templateId, status, blocks } = req.body;
+
+    const event = await Event.findOneAndUpdate(
+      { slug },
+      {
+        ...(title && { title }),
+        ...(date && { date }),
+        ...(templateId && { templateId }),
+        ...(status && { status }),
+        ...(blocks && { blocks }),
+      },
+      { new: true }
+    );
+
+    if (!event) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+
+    res.json(event);
+  } catch (error) {
+    console.error("Errore aggiornamento evento:", error.message);
+    res.status(500).json({ message: "Errore del server" });
+  }
+});
+
+// DELETE /api/events/:slug -> elimina un evento
+router.delete("/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const deleted = await Event.findOneAndDelete({ slug });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+
+    res.json({ message: "Evento eliminato" });
+  } catch (error) {
+    console.error("Errore eliminazione evento:", error.message);
+    res.status(500).json({ message: "Errore del server" });
+  }
+});
+
 export default router;
