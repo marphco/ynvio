@@ -8,6 +8,9 @@ export default function EventEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const hasRsvpBlock = (blocksArray) =>
+    blocksArray.some((b) => b.type === "rsvp");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -64,6 +67,27 @@ export default function EventEditor() {
     ]);
   };
 
+  const addRsvpBlock = () => {
+    if (hasRsvpBlock(blocks)) {
+      alert("Hai già un blocco RSVP.");
+      return;
+    }
+
+    setBlocks((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: "rsvp",
+        order: prev.length,
+        props: {},
+      },
+    ]);
+  };
+
+  const removeRsvpBlock = () => {
+    setBlocks((prev) => prev.filter((b) => b.type !== "rsvp"));
+  };
+
   const updateBlockProp = (id, field, value) => {
     setBlocks((prev) =>
       prev.map((block) =>
@@ -118,8 +142,23 @@ export default function EventEditor() {
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>Editor: {event.title}</h1>
 
-      <button onClick={addTextBlock} style={{ margin: "1rem 0" }}>
+      <button
+        onClick={addTextBlock}
+        style={{ margin: "1rem 0", marginRight: "0.5rem" }}
+      >
         + Aggiungi blocco testo
+      </button>
+
+      <button
+        onClick={addRsvpBlock}
+        disabled={hasRsvpBlock(blocks)}
+        style={{
+          margin: "1rem 0",
+          opacity: hasRsvpBlock(blocks) ? 0.5 : 1,
+          cursor: hasRsvpBlock(blocks) ? "not-allowed" : "pointer",
+        }}
+      >
+        + Aggiungi blocco RSVP
       </button>
 
       {blocks.length === 0 && <p>Nessun blocco ancora. Aggiungine uno.</p>}
@@ -167,6 +206,26 @@ export default function EventEditor() {
             />
           </div>
         ) : null
+      )}
+
+      {hasRsvpBlock(blocks) && (
+        <div
+          style={{
+            border: "1px dashed #666",
+            borderRadius: "8px",
+            padding: "1rem",
+            marginBottom: "1rem",
+            background: "#111",
+          }}
+        >
+          <strong>RSVP attivo per questo evento</strong>
+          <p style={{ marginTop: "0.5rem" }}>
+            La form di conferma presenza sarà visibile nella pagina pubblica.
+          </p>
+          <button onClick={removeRsvpBlock} style={{ marginTop: "0.5rem" }}>
+            Rimuovi blocco RSVP
+          </button>
+        </div>
       )}
 
       <button onClick={handleSave} disabled={saving}>

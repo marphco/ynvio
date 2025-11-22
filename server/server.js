@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
 import eventRoutes from "./routes/eventRoutes.js";
+import rsvpRoutes from "./routes/rsvpRoutes.js";
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.get("/", (req, res) => {
 
 // 👇 registra le API degli eventi
 app.use("/api/events", eventRoutes);
+app.use("/api/rsvps", rsvpRoutes);
 
 const PORT = process.env.PORT || 4000;
 
