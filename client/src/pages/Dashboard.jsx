@@ -5,41 +5,61 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [copiedSlug, setCopiedSlug] = useState(null);
+  const [confirmDeleteSlug, setConfirmDeleteSlug] = useState(null);
 
-  const buildEventUrl = (slug) => {
-    // in dev
-    const base = window.location.origin;
-    return `${base}/e/${slug}`;
+  const deleteEvent = async (slug) => {
+    try {
+      const res = await fetch(`http://localhost:4000/api/events/${slug}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Errore eliminazione");
+
+      // rimuovi subito dalla lista in UI
+      setEvents((prev) => prev.filter((e) => e.slug !== slug));
+      setConfirmDeleteSlug(null);
+    } catch (err) {
+      console.error(err);
+      alert("Non siamo riusciti a eliminare l'evento. Riprova.");
+    }
   };
 
-  const shareOnWhatsApp = (slug, title) => {
-    const url = buildEventUrl(slug);
-    const text = `Sei invitato a "${title}"! Apri qui: ${url}`;
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, "_blank");
+  const buildEventUrl = (slug) => {
+    const base = window.location.origin;
+    return `${base}/e/${slug}`;
   };
 
   const copyLink = async (slug) => {
     const url = buildEventUrl(slug);
     try {
       await navigator.clipboard.writeText(url);
-      alert("Link copiato ✅");
+      setCopiedSlug(slug);
+
+      // dopo 2s torna normale
+      setTimeout(() => setCopiedSlug(null), 2000);
     } catch {
-      // fallback old-school
+      // fallback se clipboard non va
       prompt("Copia il link:", url);
     }
   };
 
   const nativeShare = async (slug, title) => {
-  const url = buildEventUrl(slug);
-  const text = `Sei invitato a "${title}"!`;
-  if (navigator.share) {
-    await navigator.share({ title, text, url });
-  } else {
-    copyLink(slug);
-  }
-};
+    const url = buildEventUrl(slug);
+    const text = `Sei invitato a "${title}"!`;
 
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        // eslint-disable-next-line no-unused-vars
+      } catch (e) {
+        // se l’utente annulla, non facciamo nulla
+      }
+    } else {
+      // fallback: copia link
+      copyLink(slug);
+    }
+  };
 
   useEffect(() => {
     async function fetchEvents() {
@@ -122,14 +142,53 @@ export default function Dashboard() {
                   Apri pagina
                 </button>
 
-                <button onClick={() => copyLink(ev.slug)}>Copia link</button>
-
-                <button onClick={() => shareOnWhatsApp(ev.slug, ev.title)}>
-                  Invia su WhatsApp
+                <button
+                  onClick={() => copyLink(ev.slug)}
+                  style={{
+                    transition: "all 0.2s ease",
+                    background: copiedSlug === ev.slug ? "#1a1a1a" : undefined,
+                    border:
+                      copiedSlug === ev.slug ? "1px solid #4caf50" : undefined,
+                    color: copiedSlug === ev.slug ? "#4caf50" : undefined,
+                  }}
+                >
+                  {copiedSlug === ev.slug ? "Copiato ✅" : "Copia link"}
                 </button>
+
                 <button onClick={() => nativeShare(ev.slug, ev.title)}>
-  Condividi
-</button>
+                  Condividi
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (confirmDeleteSlug === ev.slug) {
+                      deleteEvent(ev.slug);
+                      return;
+                    }
+
+                    setConfirmDeleteSlug(ev.slug);
+                    setTimeout(() => {
+                      setConfirmDeleteSlug((current) =>
+                        current === ev.slug ? null : current
+                      );
+                    }, 3000);
+                  }}
+                  style={{
+                    transition: "all 0.2s ease",
+                    background:
+                      confirmDeleteSlug === ev.slug ? "#2a0000" : undefined,
+                    border:
+                      confirmDeleteSlug === ev.slug
+                        ? "1px solid #ff4d4d"
+                        : undefined,
+                    color:
+                      confirmDeleteSlug === ev.slug ? "#ff4d4d" : undefined,
+                  }}
+                >
+                  {confirmDeleteSlug === ev.slug
+                    ? "Conferma elimina"
+                    : "Elimina"}
+                </button>
               </div>
             </div>
           ))}
