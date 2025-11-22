@@ -9,7 +9,7 @@ export default function EventEditor() {
   const [saving, setSaving] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
 
-//   const canDragRef = useRef(true);
+  //   const canDragRef = useRef(true);
 
   const normalizeBlocks = (arr = []) => {
     return arr
@@ -145,36 +145,25 @@ export default function EventEditor() {
 
   // sposta un blocco su/giù mantenendo coerenza
   const moveBlock = (id, direction) => {
-  setBlocks((prev) => {
-    const ordered = [...prev].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    setBlocks((prev) => {
+      const ordered = [...prev].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const index = ordered.findIndex((b) => b.id === id);
+      if (index === -1) return prev;
 
-    const sortable = ordered.filter(
-      (b) => b.type === "text" || b.type === "map"
-    );
-    const fixed = ordered.filter(
-      (b) => b.type !== "text" && b.type !== "map"
-    );
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= ordered.length) return prev;
 
-    const index = sortable.findIndex((b) => b.id === id);
-    if (index === -1) return prev;
+      const next = [...ordered];
+      const [removed] = next.splice(index, 1);
+      next.splice(newIndex, 0, removed);
 
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= sortable.length) return prev;
-
-    const nextSortable = [...sortable];
-    const [removed] = nextSortable.splice(index, 1);
-    nextSortable.splice(newIndex, 0, removed);
-
-    // ricompongo: prima i sortable riordinati, poi i fixed (rsvp ecc.)
-    const recomposed = [...nextSortable, ...fixed];
-
-    return recomposed.map((b, i) => ({ ...b, order: i }));
-  });
-};
+      return next.map((b, i) => ({ ...b, order: i }));
+    });
+  };
 
   const onDragStart = (e, id) => {
-  setDraggingId(id);
-};
+    setDraggingId(id);
+  };
 
   const onDragOver = (e, overId) => {
     e.preventDefault();
@@ -319,13 +308,8 @@ export default function EventEditor() {
   );
 
   const orderedBlocks = [...blocks].sort(
-  (a, b) => (a.order ?? 0) - (b.order ?? 0)
-);
-
-// questi sono quelli che effettivamente mostri nella lista
-const sortableBlocks = orderedBlocks.filter(
-  (b) => b.type === "text" || b.type === "map"
-);
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -422,32 +406,32 @@ const sortableBlocks = orderedBlocks.filter(
 
       {blocks.length === 0 && <p>Nessun blocco ancora. Aggiungine uno.</p>}
 
-      {sortableBlocks.map((block, index) => {
-  const lastIndex = sortableBlocks.length - 1;
+      {orderedBlocks.map((block, index) => {
+        const lastIndex = orderedBlocks.length - 1;
 
         if (block.type === "text") {
           return (
             <div
-  key={block.id}
-  draggable
-  onDragStartCapture={(e) => {
-    if (e.target.closest("input, textarea, select, button, a")) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }}
-  onDragStart={(e) => onDragStart(e, block.id)}
-  onDragOver={(e) => onDragOver(e, block.id)}
-  onDragEnd={onDragEnd}
-  style={{
-    border: "1px solid #444",
-    borderRadius: "8px",
-    padding: "1rem",
-    marginBottom: "1rem",
-    cursor: draggingId === block.id ? "grabbing" : "grab",
-    userSelect: "none",
-  }}
->
+              key={block.id}
+              draggable
+              onDragStartCapture={(e) => {
+                if (e.target.closest("input, textarea, select, button, a")) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              onDragStart={(e) => onDragStart(e, block.id)}
+              onDragOver={(e) => onDragOver(e, block.id)}
+              onDragEnd={onDragEnd}
+              style={{
+                border: "1px solid #444",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+                cursor: draggingId === block.id ? "grabbing" : "grab",
+                userSelect: "none",
+              }}
+            >
               <BlockHeader
                 type="text"
                 onDelete={() => deleteBlock(block.id)}
@@ -487,26 +471,26 @@ const sortableBlocks = orderedBlocks.filter(
         if (block.type === "map") {
           return (
             <div
-  key={block.id}
-  draggable
-  onDragStartCapture={(e) => {
-    if (e.target.closest("input, textarea, select, button, a")) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }}
-  onDragStart={(e) => onDragStart(e, block.id)}
-  onDragOver={(e) => onDragOver(e, block.id)}
-  onDragEnd={onDragEnd}
-  style={{
-    border: "1px solid #444",
-    borderRadius: "8px",
-    padding: "1rem",
-    marginBottom: "1rem",
-    cursor: draggingId === block.id ? "grabbing" : "grab",
-    userSelect: "none",
-  }}
->
+              key={block.id}
+              draggable
+              onDragStartCapture={(e) => {
+                if (e.target.closest("input, textarea, select, button, a")) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              onDragStart={(e) => onDragStart(e, block.id)}
+              onDragOver={(e) => onDragOver(e, block.id)}
+              onDragEnd={onDragEnd}
+              style={{
+                border: "1px solid #444",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+                cursor: draggingId === block.id ? "grabbing" : "grab",
+                userSelect: "none",
+              }}
+            >
               <BlockHeader
                 type="map"
                 onDelete={() => deleteBlock(block.id)}
@@ -570,28 +554,96 @@ const sortableBlocks = orderedBlocks.filter(
           );
         }
 
+        if (block.type === "rsvp") {
+  return (
+    <div
+      key={block.id}
+      draggable
+      onDragStartCapture={(e) => {
+        if (e.target.closest("input, textarea, select, button, a")) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onDragStart={(e) => onDragStart(e, block.id)}
+      onDragOver={(e) => onDragOver(e, block.id)}
+      onDragEnd={onDragEnd}
+      style={{
+        border: "1px dashed #666",
+        borderRadius: "8px",
+        padding: "1rem",
+        marginBottom: "1rem",
+        background: "#111",
+        cursor: draggingId === block.id ? "grabbing" : "grab",
+        userSelect: "none",
+      }}
+    >
+      <BlockHeader
+        type="rsvp"
+        onDelete={() => deleteBlock(block.id)}
+        onUp={() => moveBlock(block.id, "up")}
+        onDown={() => moveBlock(block.id, "down")}
+        disableUp={index === 0}
+        disableDown={index === lastIndex}
+      />
+
+      <strong>RSVP attivo per questo evento</strong>
+      <p style={{ marginTop: "0.5rem" }}>
+        Il modulo di conferma presenza sarà visibile nella pagina pubblica.
+      </p>
+
+      <button onClick={removeRsvpBlock} style={{ marginTop: "0.5rem" }}>
+        Rimuovi blocco RSVP
+      </button>
+    </div>
+  );
+}
+
+if (block.type === "gallery") {
+  return (
+    <div
+      key={block.id}
+      draggable
+      onDragStartCapture={(e) => {
+        if (e.target.closest("input, textarea, select, button, a")) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onDragStart={(e) => onDragStart(e, block.id)}
+      onDragOver={(e) => onDragOver(e, block.id)}
+      onDragEnd={onDragEnd}
+      style={{
+        border: "1px solid #444",
+        borderRadius: "8px",
+        padding: "1rem",
+        marginBottom: "1rem",
+        background: "#141414",
+        cursor: draggingId === block.id ? "grabbing" : "grab",
+        userSelect: "none",
+      }}
+    >
+      <BlockHeader
+        type="gallery"
+        onDelete={() => deleteBlock(block.id)}
+        onUp={() => moveBlock(block.id, "up")}
+        onDown={() => moveBlock(block.id, "down")}
+        disableUp={index === 0}
+        disableDown={index === lastIndex}
+      />
+
+      <p style={{ opacity: 0.8 }}>
+        Gallery (Premium) — gestione immagini in arrivo 🙂
+      </p>
+    </div>
+  );
+}
+
+
         return null;
       })}
 
-      {hasRsvpBlock(blocks) && (
-        <div
-          style={{
-            border: "1px dashed #666",
-            borderRadius: "8px",
-            padding: "1rem",
-            marginBottom: "1rem",
-            background: "#111",
-          }}
-        >
-          <strong>RSVP attivo per questo evento</strong>
-          <p style={{ marginTop: "0.5rem" }}>
-            Il modulo di conferma presenza sarà visibile nella pagina pubblica.
-          </p>
-          <button onClick={removeRsvpBlock} style={{ marginTop: "0.5rem" }}>
-            Rimuovi blocco RSVP
-          </button>
-        </div>
-      )}
+      
 
       <button onClick={handleSave} disabled={saving}>
         {saving ? "Salvataggio..." : "Salva evento"}

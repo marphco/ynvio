@@ -75,6 +75,66 @@ export default function EventPublic() {
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
 
+  // ✅ FUNZIONE SOLO PER RENDERIZZARE RSVP (NO DUPLICAZIONE)
+  const renderRsvpBlock = (key) => (
+    <section key={key} style={{ marginTop: "2rem" }}>
+      <h2>Conferma la tua presenza</h2>
+      <form
+        onSubmit={handleRsvpSubmit}
+        style={{
+          maxWidth: "400px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.5rem",
+        }}
+      >
+        <input
+          type="text"
+          required
+          placeholder="Il tuo nome"
+          value={rsvpName}
+          onChange={(e) => setRsvpName(e.target.value)}
+          style={{ padding: "0.5rem" }}
+        />
+        <input
+          type="number"
+          min="1"
+          placeholder="Numero di partecipanti"
+          value={rsvpGuests}
+          onChange={(e) => setRsvpGuests(e.target.value)}
+          style={{ padding: "0.5rem" }}
+        />
+        <select
+          value={rsvpStatus}
+          onChange={(e) => setRsvpStatus(e.target.value)}
+          style={{ padding: "0.5rem" }}
+        >
+          <option value="yes">Parteciperò</option>
+          <option value="maybe">Forse</option>
+          <option value="no">Non posso</option>
+        </select>
+        <textarea
+          placeholder="Messaggio opzionale"
+          rows={3}
+          value={rsvpMessage}
+          onChange={(e) => setRsvpMessage(e.target.value)}
+          style={{ padding: "0.5rem" }}
+        />
+
+        <button type="submit" disabled={rsvpSending}>
+          {rsvpSending ? "Invio in corso..." : "Invia risposta"}
+        </button>
+
+        {rsvpDone && (
+          <p style={{ color: "lightgreen" }}>
+            Grazie, abbiamo registrato la tua risposta ✅
+          </p>
+        )}
+        {rsvpError && <p style={{ color: "salmon" }}>{rsvpError}</p>}
+      </form>
+    </section>
+  );
+
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>{event.title}</h1>
@@ -199,6 +259,11 @@ export default function EventPublic() {
             );
           }
 
+          // ✅ BLOCCO RSVP (ora rispetta order)
+          if (block.type === "rsvp") {
+            return renderRsvpBlock(block.id || block._id);
+          }
+
           // ✅ BLOCCO GALLERY (placeholder MVP)
           if (block.type === "gallery") {
             return (
@@ -222,65 +287,6 @@ export default function EventPublic() {
         })
       ) : (
         <p>Nessun contenuto ancora.</p>
-      )}
-
-      {event.blocks?.some((b) => b.type === "rsvp") && (
-        <section style={{ marginTop: "2rem" }}>
-          <h2>Conferma la tua presenza</h2>
-          <form
-            onSubmit={handleRsvpSubmit}
-            style={{
-              maxWidth: "400px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.5rem",
-            }}
-          >
-            <input
-              type="text"
-              required
-              placeholder="Il tuo nome"
-              value={rsvpName}
-              onChange={(e) => setRsvpName(e.target.value)}
-              style={{ padding: "0.5rem" }}
-            />
-            <input
-              type="number"
-              min="1"
-              placeholder="Numero di partecipanti"
-              value={rsvpGuests}
-              onChange={(e) => setRsvpGuests(e.target.value)}
-              style={{ padding: "0.5rem" }}
-            />
-            <select
-              value={rsvpStatus}
-              onChange={(e) => setRsvpStatus(e.target.value)}
-              style={{ padding: "0.5rem" }}
-            >
-              <option value="yes">Parteciperò</option>
-              <option value="maybe">Forse</option>
-              <option value="no">Non posso</option>
-            </select>
-            <textarea
-              placeholder="Messaggio opzionale"
-              rows={3}
-              value={rsvpMessage}
-              onChange={(e) => setRsvpMessage(e.target.value)}
-              style={{ padding: "0.5rem" }}
-            />
-
-            <button type="submit" disabled={rsvpSending}>
-              {rsvpSending ? "Invio in corso..." : "Invia risposta"}
-            </button>
-
-            {rsvpDone && (
-              <p style={{ color: "lightgreen" }}>
-                Grazie, abbiamo registrato la tua risposta ✅
-              </p>
-            )}
-            {rsvpError && <p style={{ color: "salmon" }}>{rsvpError}</p>}
-          </form>
-        </section>
       )}
     </div>
   );
