@@ -1,5 +1,6 @@
 import express from "express";
 import Event from "../models/Event.js";
+import Rsvp from "../models/Rsvp.js";
 
 const router = express.Router();
 
@@ -93,6 +94,18 @@ router.get("/:slug", async (req, res) => {
     res.json(event);
   } catch (error) {
     console.error("Errore recupero evento:", error.message);
+    res.status(500).json({ message: "Errore del server" });
+  }
+});
+
+// GET /api/events/:slug/rsvps -> lista RSVP di un evento
+router.get("/:slug/rsvps", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const rsvps = await Rsvp.find({ eventSlug: slug }).sort({ createdAt: -1 });
+    res.json(rsvps);
+  } catch (err) {
+    console.error("Errore recupero rsvps:", err.message);
     res.status(500).json({ message: "Errore del server" });
   }
 });

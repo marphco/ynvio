@@ -159,6 +159,10 @@ export default function Dashboard() {
                   Condividi
                 </button>
 
+                <button onClick={() => navigate(`/rsvps/${ev.slug}`)}>
+                  Vedi RSVP
+                </button>
+
                 <button
                   onClick={() => {
                     if (confirmDeleteSlug === ev.slug) {
