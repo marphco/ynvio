@@ -30,4 +30,42 @@ router.post("/", async (req, res) => {
   }
 });
 
+// PUT update RSVP
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, guestsCount, status, message } = req.body;
+
+    const updated = await Rsvp.findByIdAndUpdate(
+      id,
+      {
+        ...(name !== undefined ? { name } : {}),
+        ...(guestsCount !== undefined ? { guestsCount } : {}),
+        ...(status !== undefined ? { status } : {}),
+        ...(message !== undefined ? { message } : {}),
+      },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ error: "RSVP non trovata" });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore update RSVP" });
+  }
+});
+
+// DELETE RSVP
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Rsvp.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: "RSVP non trovata" });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Errore delete RSVP" });
+  }
+});
+
 export default router;
