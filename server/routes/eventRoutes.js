@@ -20,6 +20,7 @@ const slugify = (str) => {
 router.post("/", async (req, res) => {
   try {
     const { title, date, dateTBD, templateId, blocks } = req.body;
+    const { plan } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "title è obbligatorio" });
@@ -59,6 +60,7 @@ router.post("/", async (req, res) => {
       templateId: templateId || "basic-free",
       status: "draft",
       blocks: blocks || [],
+      plan: plan || "free",
     });
 
     res.status(201).json(event);
@@ -115,12 +117,14 @@ router.put("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
     const { title, date, dateTBD, templateId, status, blocks } = req.body;
+    const { plan } = req.body;
 
     const update = {
       ...(title !== undefined && { title }),
       ...(templateId !== undefined && { templateId }),
       ...(status !== undefined && { status }),
       ...(blocks !== undefined && { blocks }),
+      ...(plan !== undefined && { plan }),
     };
 
     // gestione data / TBD

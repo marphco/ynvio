@@ -118,7 +118,35 @@ export default function Dashboard() {
                 background: "#161616",
               }}
             >
-              <h2 style={{ margin: 0 }}>{ev.title}</h2>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <h2 style={{ margin: 0 }}>{ev.title}</h2>
+
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "999px",
+                    border: "1px solid",
+                    borderColor: ev.plan === "premium" ? "#f5c542" : "#666",
+                    color: ev.plan === "premium" ? "#f5c542" : "#bbb",
+                    background:
+                      ev.plan === "premium" ? "rgba(245,197,66,0.08)" : "#111",
+                    whiteSpace: "nowrap",
+                    fontWeight: 600,
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  {ev.plan === "premium" ? "⭐ Premium" : "Free"}
+                </span>
+              </div>
+
               <p style={{ opacity: 0.8, marginTop: "0.25rem" }}>
                 {ev.dateTBD
                   ? "📅 Data da definire"

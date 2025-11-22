@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 
 const BlockSchema = new mongoose.Schema(
   {
-    id: { type: String, required: true },              // 👈 AGGIUNTO
-    type: { type: String, required: true },            // es: "text", "image", "map", "rsvp"
+    id: { type: String, required: true }, // 👈 AGGIUNTO
+    type: { type: String, required: true }, // es: "text", "image", "map", "rsvp"
     order: { type: Number, required: true },
     props: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
@@ -19,6 +19,11 @@ const EventSchema = new mongoose.Schema(
     templateId: { type: String, default: "basic-free" },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     blocks: { type: [BlockSchema], default: [] },
+    plan: {
+      type: String,
+      enum: ["free", "premium"],
+      default: "free",
+    },
   },
   { timestamps: true }
 );

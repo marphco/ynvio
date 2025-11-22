@@ -102,7 +102,42 @@ export default function EventPublic() {
               </section>
             );
           }
-          // altri tipi li gestiremo dopo
+
+          if (block.type === "map") {
+            const address = block.props?.address || "";
+            const title = block.props?.title || "Come arrivare";
+
+            const query = encodeURIComponent(address);
+            const href =
+              block.props?.mapUrl ||
+              (query
+                ? `https://www.google.com/maps/search/?api=1&query=${query}`
+                : null);
+
+            return (
+              <section key={block.id} style={{ margin: "1.5rem 0" }}>
+                <h2 style={{ marginBottom: "0.5rem" }}>{title}</h2>
+
+                {address && <p style={{ opacity: 0.9 }}>{address}</p>}
+
+                {href && (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: "inline-block",
+                      marginTop: "0.5rem",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Apri su Google Maps →
+                  </a>
+                )}
+              </section>
+            );
+          }
+
           return null;
         })
       ) : (

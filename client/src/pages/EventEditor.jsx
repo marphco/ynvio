@@ -88,6 +88,42 @@ export default function EventEditor() {
     setBlocks((prev) => prev.filter((b) => b.type !== "rsvp"));
   };
 
+  const addGalleryBlock = () => {
+    // doppia sicurezza: anche se il button è disabled
+    if (!isPremium) {
+      alert("La Gallery è disponibile solo per Premium.");
+      return;
+    }
+
+    setBlocks((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: "gallery",
+        order: prev.length,
+        props: {
+          images: [], // per ora vuoto
+        },
+      },
+    ]);
+  };
+
+  const addMapBlock = () => {
+    setBlocks((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: "map",
+        order: prev.length,
+        props: {
+          title: "Come arrivare",
+          address: "",
+          mapUrl: "", // link google maps opzionale
+        },
+      },
+    ]);
+  };
+
   const updateBlockProp = (id, field, value) => {
     setBlocks((prev) =>
       prev.map((block) =>
@@ -138,6 +174,45 @@ export default function EventEditor() {
 
   if (loading) return <p>Caricamento editor...</p>;
   if (!event) return <p>Evento non trovato.</p>;
+  const isPremium = event.plan === "premium";
+
+  const blockLabel = (type) => {
+    if (type === "text") return "Blocco testo";
+    if (type === "map") return "Mappa";
+    if (type === "gallery") return "Gallery";
+    if (type === "rsvp") return "RSVP";
+    return "Blocco";
+  };
+
+  const BlockHeader = ({ type, onDelete }) => (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: "0.75rem",
+      }}
+    >
+      <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>
+        {blockLabel(type)}
+      </span>
+
+      <button
+        onClick={onDelete}
+        style={{
+          fontSize: "0.8rem",
+          opacity: 0.8,
+          background: "transparent",
+          border: "1px solid #333",
+          padding: "0.25rem 0.5rem",
+          cursor: "pointer",
+        }}
+        title="Elimina blocco"
+      >
+        ✕ Elimina
+      </button>
+    </div>
+  );
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -177,71 +252,171 @@ export default function EventEditor() {
         Data da definire
       </label>
 
-      <button
-        onClick={addTextBlock}
-        style={{ margin: "1rem 0", marginRight: "0.5rem" }}
-      >
-        + Aggiungi blocco testo
-      </button>
+      {/* ===== ADD-ON FREE ===== */}
+      <div style={{ marginTop: "1.25rem", marginBottom: "0.75rem" }}>
+        <p
+          style={{ fontSize: "0.85rem", opacity: 0.7, marginBottom: "0.5rem" }}
+        >
+          Add-on gratuiti
+        </p>
 
-      <button
-        onClick={addRsvpBlock}
-        disabled={hasRsvpBlock(blocks)}
-        style={{
-          margin: "1rem 0",
-          opacity: hasRsvpBlock(blocks) ? 0.5 : 1,
-          cursor: hasRsvpBlock(blocks) ? "not-allowed" : "pointer",
-        }}
-      >
-        + Aggiungi blocco RSVP
-      </button>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button onClick={addTextBlock}>+ Blocco testo</button>
+
+          <button
+            onClick={addRsvpBlock}
+            disabled={hasRsvpBlock(blocks)}
+            style={{
+              opacity: hasRsvpBlock(blocks) ? 0.5 : 1,
+              cursor: hasRsvpBlock(blocks) ? "not-allowed" : "pointer",
+            }}
+          >
+            + RSVP
+          </button>
+
+          <button onClick={addMapBlock}>+ Mappa</button>
+        </div>
+      </div>
+
+      {/* ===== ADD-ON PREMIUM ===== */}
+      <div style={{ marginTop: "0.75rem", marginBottom: "1rem" }}>
+        <p
+          style={{ fontSize: "0.85rem", opacity: 0.7, marginBottom: "0.5rem" }}
+        >
+          Add-on Premium
+        </p>
+
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            disabled={!isPremium}
+            onClick={addGalleryBlock}
+            style={{
+              opacity: isPremium ? 1 : 0.5,
+              cursor: isPremium ? "pointer" : "not-allowed",
+            }}
+            title={!isPremium ? "Disponibile solo con Premium" : ""}
+          >
+            + Gallery {isPremium ? "" : "🔒 Premium (7€)"}
+          </button>
+
+          {/* qui in futuro aggiungi altri premium:
+        <button disabled={!isPremium} onClick={addTableauBlock}>
+          + Tableau 🔒 Premium (12€)
+        </button>
+    */}
+        </div>
+      </div>
 
       {blocks.length === 0 && <p>Nessun blocco ancora. Aggiungine uno.</p>}
 
-      {blocks.map((block, index) =>
-        block.type === "text" ? (
-          <div
-            key={block.id || block._id || index}
-            style={{
-              border: "1px solid #444",
-              borderRadius: "8px",
-              padding: "1rem",
-              marginBottom: "1rem",
-            }}
-          >
-            <button
-              onClick={() => deleteBlock(block.id)}
-              style={{ marginBottom: "0.5rem" }}
-            >
-              Elimina blocco
-            </button>
-
-            <input
-              type="text"
-              value={block.props.heading || ""}
-              onChange={(e) =>
-                updateBlockProp(block.id, "heading", e.target.value)
-              }
-              placeholder="Titolo del blocco"
+      {blocks.map((block, index) => {
+        if (block.type === "text") {
+          return (
+            <div
+              key={block.id || block._id || index}
               style={{
-                width: "100%",
-                marginBottom: "0.5rem",
-                padding: "0.5rem",
+                border: "1px solid #444",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
               }}
-            />
+            >
+              <BlockHeader type="text" onDelete={() => deleteBlock(block.id)} />
 
-            <textarea
-              value={block.props.body || ""}
-              onChange={(e) =>
-                updateBlockProp(block.id, "body", e.target.value)
-              }
-              placeholder="Descrizione / testo del blocco"
-              rows={3}
-              style={{ width: "100%", padding: "0.5rem" }}
-            />
-          </div>
-        ) : null
-      )}
+              <input
+                type="text"
+                value={block.props.heading || ""}
+                onChange={(e) =>
+                  updateBlockProp(block.id, "heading", e.target.value)
+                }
+                placeholder="Titolo del blocco"
+                style={{
+                  width: "100%",
+                  marginBottom: "0.5rem",
+                  padding: "0.5rem",
+                }}
+              />
+
+              <textarea
+                value={block.props.body || ""}
+                onChange={(e) =>
+                  updateBlockProp(block.id, "body", e.target.value)
+                }
+                placeholder="Descrizione / testo del blocco"
+                rows={3}
+                style={{ width: "100%", padding: "0.5rem" }}
+              />
+            </div>
+          );
+        }
+
+        if (block.type === "map") {
+          return (
+            <div
+              key={block.id || block._id || index}
+              style={{
+                border: "1px solid #444",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+                background: "#141414",
+              }}
+            >
+              <BlockHeader type="map" onDelete={() => deleteBlock(block.id)} />
+
+              <input
+                type="text"
+                value={block.props.title || ""}
+                onChange={(e) =>
+                  updateBlockProp(block.id, "title", e.target.value)
+                }
+                placeholder="Titolo sezione (es. Come arrivare)"
+                style={{
+                  width: "100%",
+                  marginBottom: "0.5rem",
+                  padding: "0.5rem",
+                }}
+              />
+
+              <input
+                type="text"
+                value={block.props.address || ""}
+                onChange={(e) =>
+                  updateBlockProp(block.id, "address", e.target.value)
+                }
+                placeholder="Indirizzo (es. Via Roma 10, Napoli)"
+                style={{
+                  width: "100%",
+                  marginBottom: "0.5rem",
+                  padding: "0.5rem",
+                }}
+              />
+
+              <input
+                type="text"
+                value={block.props.mapUrl || ""}
+                onChange={(e) =>
+                  updateBlockProp(block.id, "mapUrl", e.target.value)
+                }
+                placeholder="Link Google Maps (opzionale)"
+                style={{
+                  width: "100%",
+                  padding: "0.5rem",
+                }}
+              />
+
+              <small
+                style={{ opacity: 0.6, display: "block", marginTop: "0.5rem" }}
+              >
+                Se non metti il link, useremo la ricerca dell’indirizzo.
+              </small>
+            </div>
+          );
+        }
+
+        // altri blocchi (gallery ecc.) per ora non renderizzati ma non rompono nulla
+        return null;
+      })}
 
       {hasRsvpBlock(blocks) && (
         <div
@@ -255,7 +430,7 @@ export default function EventEditor() {
         >
           <strong>RSVP attivo per questo evento</strong>
           <p style={{ marginTop: "0.5rem" }}>
-            La form di conferma presenza sarà visibile nella pagina pubblica.
+            Il modulo di conferma presenza sarà visibile nella pagina pubblica.
           </p>
           <button onClick={removeRsvpBlock} style={{ marginTop: "0.5rem" }}>
             Rimuovi blocco RSVP
