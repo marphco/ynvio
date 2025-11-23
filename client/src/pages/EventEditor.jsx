@@ -9,6 +9,7 @@ export default function EventEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
+  const [uploadError, setUploadError] = useState("");
 
   //   const canDragRef = useRef(true);
 
@@ -684,6 +685,8 @@ export default function EventEditor() {
                       const files = Array.from(e.target.files || []);
                       if (!files.length) return;
 
+                      setUploadError(""); // reset prima di ogni upload
+
                       try {
                         const formData = new FormData();
                         files.forEach((file) =>
@@ -694,7 +697,24 @@ export default function EventEditor() {
                           method: "POST",
                           body: formData,
                         });
-                        if (!res.ok) throw new Error("Upload fallito");
+
+                        if (!res.ok) {
+                          const errData = await res.json().catch(() => ({}));
+
+                          // 👇 messaggi MVP
+                          if (errData.code === "LIMIT_FILE_SIZE") {
+                            throw new Error(
+                              "Ogni immagine deve pesare massimo 15MB."
+                            );
+                          }
+                          if (errData.code === "LIMIT_FILE_COUNT") {
+                            throw new Error(
+                              "Puoi caricare massimo 20 immagini alla volta."
+                            );
+                          }
+
+                          throw new Error(errData.error || "Upload fallito.");
+                        }
 
                         const data = await res.json();
                         const urls = data.urls || [];
@@ -717,7 +737,9 @@ export default function EventEditor() {
                         );
                       } catch (err) {
                         console.error(err);
-                        alert("Errore upload immagini");
+                        setUploadError(
+                          err.message || "Errore upload immagini."
+                        );
                       } finally {
                         e.target.value = "";
                       }
@@ -734,6 +756,17 @@ export default function EventEditor() {
                 >
                   Puoi selezionare più foto insieme.
                 </small>
+                {uploadError && (
+                  <p
+                    style={{
+                      color: "salmon",
+                      marginTop: "0.5rem",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    {uploadError}
+                  </p>
+                )}
               </div>
 
               {/* Preview thumbnails */}
