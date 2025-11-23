@@ -1,6 +1,7 @@
 import express from "express";
 import Event from "../models/Event.js";
 import Rsvp from "../models/Rsvp.js";
+import { getRsvpsSummary } from "../controllers/rsvpSummaryController.js";
 
 const router = express.Router();
 
@@ -169,5 +170,8 @@ router.delete("/:slug", async (req, res) => {
     res.status(500).json({ message: "Errore del server" });
   }
 });
+
+// RSVPs SUMMARY
+router.get("/:slug/rsvps/summary", getRsvpsSummary);
 
 export default router;
