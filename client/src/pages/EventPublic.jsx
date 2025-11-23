@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { API_BASE, resolveImageUrl } from "../config/api";
 
 export default function EventPublic() {
   const { slug } = useParams();
@@ -16,7 +17,7 @@ export default function EventPublic() {
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/events/${slug}`);
+        const res = await fetch(`${API_BASE}/api/events/${slug}`);
         if (!res.ok) {
           throw new Error("Evento non trovato");
         }
@@ -39,7 +40,7 @@ export default function EventPublic() {
     setRsvpSending(true);
 
     try {
-      const res = await fetch("http://localhost:4000/api/rsvps", {
+      const res = await fetch(`${API_BASE}/api/rsvps`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -74,10 +75,6 @@ export default function EventPublic() {
   const orderedBlocks = [...(event.blocks || [])].sort(
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
-
-  const API_BASE = "http://localhost:4000";
-  const resolveImageUrl = (u) =>
-    u?.startsWith("/uploads/") ? `${API_BASE}${u}` : u;
 
   // ✅ FUNZIONE SOLO PER RENDERIZZARE RSVP (NO DUPLICAZIONE)
   const renderRsvpBlock = (key) => (

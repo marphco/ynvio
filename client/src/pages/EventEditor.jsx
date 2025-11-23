@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { API_BASE, resolveImageUrl } from "../config/api";
 
 export default function EventEditor() {
   const { slug } = useParams();
@@ -30,7 +31,7 @@ export default function EventEditor() {
 
     async function fetchEvent() {
       try {
-        const res = await fetch(`http://localhost:4000/api/events/${slug}`);
+        const res = await fetch(`${API_BASE}/api/events/${slug}`);
         if (!res.ok) {
           throw new Error("Evento non trovato");
         }
@@ -217,7 +218,7 @@ export default function EventEditor() {
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .map((b, i) => ({ ...b, order: i }));
     try {
-      const res = await fetch(`http://localhost:4000/api/events/${slug}`, {
+      const res = await fetch(`${API_BASE}/api/events/${slug}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -333,13 +334,6 @@ export default function EventEditor() {
   const orderedBlocks = [...blocks].sort(
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
-
-  const API_BASE = "http://localhost:4000";
-
-  const resolveImageUrl = (u) => {
-    if (!u) return "";
-    return u.startsWith("/uploads/") ? `${API_BASE}${u}` : u;
-  };
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -696,13 +690,10 @@ export default function EventEditor() {
                           formData.append("images", file)
                         );
 
-                        const res = await fetch(
-                          "http://localhost:4000/api/uploads",
-                          {
-                            method: "POST",
-                            body: formData,
-                          }
-                        );
+                        const res = await fetch(`${API_BASE}/api/uploads`, {
+                          method: "POST",
+                          body: formData,
+                        });
                         if (!res.ok) throw new Error("Upload fallito");
 
                         const data = await res.json();
