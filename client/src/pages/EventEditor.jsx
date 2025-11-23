@@ -11,7 +11,9 @@ export default function EventEditor() {
   const [draggingId, setDraggingId] = useState(null);
   const [uploadError, setUploadError] = useState("");
 
-  //   const canDragRef = useRef(true);
+  const DRAFT_KEY = `ynvio:draft:${slug}`;
+
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const normalizeBlocks = (arr = []) => {
     return arr
@@ -26,6 +28,40 @@ export default function EventEditor() {
 
   const hasRsvpBlock = (blocksArray) =>
     blocksArray.some((b) => b.type === "rsvp");
+
+    const loadDraft = () => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.blocks)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveDraft = (blocksToSave) => {
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          blocks: blocksToSave,
+          savedAt: Date.now(),
+        })
+      );
+    } catch {
+      // se LS è pieno o errore, ignoriamo per MVP
+    }
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    // eslint-disable-next-line no-empty
+    } catch {}
+  };
+
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +78,17 @@ export default function EventEditor() {
           const cleanOrderedBlocks = normalizeBlocks(data.blocks || []);
 
           setEvent(data);
-          setBlocks(cleanOrderedBlocks);
+
+         // 👇 RESTORE draft se esiste
+         const draft = loadDraft();
+         if (draft && draft.blocks.length > 0) {
+           const restored = normalizeBlocks(draft.blocks);
+           setBlocks(restored);
+         } else {
+           setBlocks(cleanOrderedBlocks);
+         }
+
+         setDraftRestored(true);
         }
       } catch (err) {
         console.error(err);
@@ -61,7 +107,14 @@ export default function EventEditor() {
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  useEffect(() => {
+    if (!draftRestored) return; // non salvare prima del restore iniziale
+    saveDraft(blocks);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, draftRestored]);
 
   const addTextBlock = () => {
     setBlocks((prev) => [
@@ -241,6 +294,7 @@ export default function EventEditor() {
       const updated = await res.json();
       setEvent(updated);
       setBlocks(normalizeBlocks(updated.blocks || []));
+      clearDraft(); // ✅ draft non serve più perché DB è aggiornato
     } catch (err) {
       console.error(err);
       alert("Errore durante il salvataggio");
