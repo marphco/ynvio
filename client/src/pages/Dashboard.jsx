@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE } from "../config/api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -10,7 +11,7 @@ export default function Dashboard() {
 
   const deleteEvent = async (slug) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/events/${slug}`, {
+      const res = await fetch(`${API_BASE}/api/events/${slug}`, {
         method: "DELETE",
       });
 
@@ -64,7 +65,7 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchEvents() {
       try {
-        const res = await fetch("http://localhost:4000/api/events");
+        const res = await fetch(`${API_BASE}/api/events`);
         const data = await res.json();
         setEvents(data);
       } catch (err) {

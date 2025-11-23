@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { API_BASE } from "../config/api";
 
 export default function EventRsvps() {
   const { slug } = useParams();
@@ -30,7 +31,7 @@ export default function EventRsvps() {
     async function fetchAll() {
       try {
         // evento per titolo
-        const evRes = await fetch(`http://localhost:4000/api/events/${slug}`);
+        const evRes = await fetch(`${API_BASE}/api/events/${slug}`);
         if (evRes.ok) {
           const evData = await evRes.json();
           setEventTitle(evData.title || slug);
@@ -39,9 +40,7 @@ export default function EventRsvps() {
         }
 
         // rsvps
-        const rRes = await fetch(
-          `http://localhost:4000/api/events/${slug}/rsvps`
-        );
+        const rRes = await fetch(`${API_BASE}/api/events/${slug}/rsvps`);
         if (rRes.ok) {
           const rData = await rRes.json();
           setRsvps(Array.isArray(rData) ? rData : []);
@@ -100,7 +99,7 @@ export default function EventRsvps() {
     setManualSending(true);
 
     try {
-      const res = await fetch("http://localhost:4000/api/rsvps", {
+      const res = await fetch(`${API_BASE}/api/rsvps`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -145,7 +144,7 @@ export default function EventRsvps() {
 
   const saveEdit = async (id) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/rsvps/${id}`, {
+      const res = await fetch(`${API_BASE}/api/rsvps/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -169,7 +168,7 @@ export default function EventRsvps() {
 
   const deleteRsvp = async (id) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/rsvps/${id}`, {
+      const res = await fetch(`${API_BASE}/api/rsvps/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Errore delete RSVP");
