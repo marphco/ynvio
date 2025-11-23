@@ -259,26 +259,72 @@ export default function EventPublic() {
             );
           }
 
-          // ✅ BLOCCO RSVP (ora rispetta order)
+          // ✅ BLOCCO RSVP
           if (block.type === "rsvp") {
             return renderRsvpBlock(block.id || block._id);
           }
 
-          // ✅ BLOCCO GALLERY (placeholder MVP)
+          // ✅ BLOCCO GALLERY
           if (block.type === "gallery") {
+            const images = block.props?.images || [];
+
             return (
               <section
                 key={block.id}
                 style={{
                   margin: "1.5rem 0",
                   padding: "1rem",
-                  border: "1px dashed #999",
-                  borderRadius: "8px",
-                  opacity: 0.7,
+                  border: "1px solid #333",
+                  borderRadius: "10px",
+                  background: "#161616",
+                  color: "#fff",
                 }}
               >
-                <h2 style={{ marginBottom: "0.5rem" }}>Gallery</h2>
-                <p>Contenuto premium. Disponibile prossimamente.</p>
+                <h2 style={{ marginBottom: "0.75rem" }}>Gallery</h2>
+
+                {images.length === 0 ? (
+                  <p style={{ opacity: 0.7 }}>Nessuna immagine disponibile.</p>
+                ) : (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(140px, 1fr))",
+                      gap: "0.6rem",
+                    }}
+                  >
+                    {images.map((url, i) => (
+                      <a
+                        key={`${block.id}-pub-img-${i}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: "block",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                          border: "1px solid #2a2a2a",
+                          background: "#0f0f0f",
+                        }}
+                        title="Apri immagine"
+                      >
+                        <img
+                          src={url}
+                          alt={`gallery-${i}`}
+                          style={{
+                            width: "100%",
+                            height: "160px",
+                            objectFit: "cover",
+                          }}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.opacity = 0.35;
+                          }}
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </section>
             );
           }

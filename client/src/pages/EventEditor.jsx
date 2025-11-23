@@ -99,10 +99,10 @@ export default function EventEditor() {
 
   const addGalleryBlock = () => {
     // doppia sicurezza: anche se il button è disabled
-    if (!isPremium) {
-      alert("La Gallery è disponibile solo per Premium.");
-      return;
-    }
+    if (!canUsePremium) {
+  alert("La Gallery è disponibile solo per Premium.");
+  return;
+}
 
     setBlocks((prev) => [
       ...prev,
@@ -142,6 +142,43 @@ export default function EventEditor() {
       )
     );
   };
+
+  // ===== GALLERY HELPERS =====
+const addGalleryImage = (blockId, url) => {
+  const cleanUrl = (url || "").trim();
+  if (!cleanUrl) return;
+
+  setBlocks((prev) =>
+    prev.map((b) =>
+      b.id === blockId
+        ? {
+            ...b,
+            props: {
+              ...b.props,
+              images: [...(b.props.images || []), cleanUrl],
+            },
+          }
+        : b
+    )
+  );
+};
+
+const removeGalleryImage = (blockId, indexToRemove) => {
+  setBlocks((prev) =>
+    prev.map((b) =>
+      b.id === blockId
+        ? {
+            ...b,
+            props: {
+              ...b.props,
+              images: (b.props.images || []).filter((_, i) => i !== indexToRemove),
+            },
+          }
+        : b
+    )
+  );
+};
+
 
   // sposta un blocco su/giù mantenendo coerenza
   const moveBlock = (id, direction) => {
@@ -230,8 +267,14 @@ export default function EventEditor() {
   };
 
   if (loading) return <p>Caricamento editor...</p>;
-  if (!event) return <p>Evento non trovato.</p>;
-  const isPremium = event.plan === "premium";
+if (!event) return <p>Evento non trovato.</p>;
+
+const plan = (event?.plan || "").toLowerCase();
+const isPremium = plan === "premium";
+
+// ✅ DEV OVERRIDE: in dev puoi testare premium anche su free
+const canUsePremium = import.meta.env.DEV ? true : isPremium;
+
 
   const blockLabel = (type) => {
     if (type === "text") return "Blocco testo";
@@ -385,16 +428,17 @@ export default function EventEditor() {
 
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
-            disabled={!isPremium}
-            onClick={addGalleryBlock}
-            style={{
-              opacity: isPremium ? 1 : 0.5,
-              cursor: isPremium ? "pointer" : "not-allowed",
-            }}
-            title={!isPremium ? "Disponibile solo con Premium" : ""}
-          >
-            + Gallery {isPremium ? "" : "🔒 Premium (7€)"}
-          </button>
+  disabled={!canUsePremium}
+  onClick={addGalleryBlock}
+  style={{
+    opacity: canUsePremium ? 1 : 0.5,
+    cursor: canUsePremium ? "pointer" : "not-allowed",
+  }}
+  title={!canUsePremium ? "Disponibile solo con Premium" : ""}
+>
+  + Gallery {canUsePremium ? "" : "🔒 Premium (7€)"}
+</button>
+
 
           {/* qui in futuro aggiungi altri premium:
         <button disabled={!isPremium} onClick={addTableauBlock}>
@@ -600,6 +644,8 @@ export default function EventEditor() {
 }
 
 if (block.type === "gallery") {
+  const images = block.props?.images || [];
+
   return (
     <div
       key={block.id}
@@ -632,12 +678,91 @@ if (block.type === "gallery") {
         disableDown={index === lastIndex}
       />
 
-      <p style={{ opacity: 0.8 }}>
-        Gallery (Premium) — gestione immagini in arrivo 🙂
-      </p>
+      {/* Input URL immagine */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+        <input
+          type="text"
+          placeholder="Incolla URL immagine (https://...)"
+          defaultValue=""
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addGalleryImage(block.id, e.currentTarget.value);
+              e.currentTarget.value = "";
+            }
+          }}
+          style={{ flex: 1, padding: "0.5rem" }}
+        />
+        <button
+          onClick={(e) => {
+            const input = e.currentTarget
+              .closest("div")
+              ?.querySelector("input");
+            if (!input) return;
+            addGalleryImage(block.id, input.value);
+            input.value = "";
+          }}
+        >
+          Aggiungi
+        </button>
+      </div>
+
+      {/* Lista preview */}
+      {images.length === 0 ? (
+        <p style={{ opacity: 0.7 }}>Nessuna immagine ancora. Incolla un link sopra.</p>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+            gap: "0.5rem",
+          }}
+        >
+          {images.map((url, i) => (
+            <div
+              key={`${block.id}-img-${i}`}
+              style={{
+                position: "relative",
+                borderRadius: "6px",
+                overflow: "hidden",
+                border: "1px solid #333",
+                background: "#0f0f0f",
+              }}
+            >
+              <img
+                src={url}
+                alt={`gallery-${i}`}
+                style={{ width: "100%", height: "120px", objectFit: "cover" }}
+                onError={(e) => {
+                  e.currentTarget.style.opacity = 0.35;
+                }}
+              />
+              <button
+                onClick={() => removeGalleryImage(block.id, i)}
+                style={{
+                  position: "absolute",
+                  top: 6,
+                  right: 6,
+                  background: "rgba(0,0,0,0.7)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  padding: "2px 6px",
+                  cursor: "pointer",
+                  fontSize: "0.8rem",
+                }}
+                title="Rimuovi immagine"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
 
 
         return null;
