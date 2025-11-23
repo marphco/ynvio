@@ -100,9 +100,9 @@ export default function EventEditor() {
   const addGalleryBlock = () => {
     // doppia sicurezza: anche se il button è disabled
     if (!canUsePremium) {
-  alert("La Gallery è disponibile solo per Premium.");
-  return;
-}
+      alert("La Gallery è disponibile solo per Premium.");
+      return;
+    }
 
     setBlocks((prev) => [
       ...prev,
@@ -111,10 +111,28 @@ export default function EventEditor() {
         type: "gallery",
         order: prev.length,
         props: {
-          images: [], // per ora vuoto
+          images: [],
         },
       },
     ]);
+  };
+
+  const removeGalleryImage = (blockId, indexToRemove) => {
+    setBlocks((prev) =>
+      prev.map((b) =>
+        b.id === blockId
+          ? {
+              ...b,
+              props: {
+                ...b.props,
+                images: (b.props.images || []).filter(
+                  (_, i) => i !== indexToRemove
+                ),
+              },
+            }
+          : b
+      )
+    );
   };
 
   const addMapBlock = () => {
@@ -142,43 +160,6 @@ export default function EventEditor() {
       )
     );
   };
-
-  // ===== GALLERY HELPERS =====
-const addGalleryImage = (blockId, url) => {
-  const cleanUrl = (url || "").trim();
-  if (!cleanUrl) return;
-
-  setBlocks((prev) =>
-    prev.map((b) =>
-      b.id === blockId
-        ? {
-            ...b,
-            props: {
-              ...b.props,
-              images: [...(b.props.images || []), cleanUrl],
-            },
-          }
-        : b
-    )
-  );
-};
-
-const removeGalleryImage = (blockId, indexToRemove) => {
-  setBlocks((prev) =>
-    prev.map((b) =>
-      b.id === blockId
-        ? {
-            ...b,
-            props: {
-              ...b.props,
-              images: (b.props.images || []).filter((_, i) => i !== indexToRemove),
-            },
-          }
-        : b
-    )
-  );
-};
-
 
   // sposta un blocco su/giù mantenendo coerenza
   const moveBlock = (id, direction) => {
@@ -267,14 +248,13 @@ const removeGalleryImage = (blockId, indexToRemove) => {
   };
 
   if (loading) return <p>Caricamento editor...</p>;
-if (!event) return <p>Evento non trovato.</p>;
+  if (!event) return <p>Evento non trovato.</p>;
 
-const plan = (event?.plan || "").toLowerCase();
-const isPremium = plan === "premium";
+  const plan = (event?.plan || "").toLowerCase();
+  const isPremium = plan === "premium";
 
-// ✅ DEV OVERRIDE: in dev puoi testare premium anche su free
-const canUsePremium = import.meta.env.DEV ? true : isPremium;
-
+  // ✅ DEV OVERRIDE: in dev puoi testare premium anche su free
+  const canUsePremium = import.meta.env.DEV ? true : isPremium;
 
   const blockLabel = (type) => {
     if (type === "text") return "Blocco testo";
@@ -354,6 +334,13 @@ const canUsePremium = import.meta.env.DEV ? true : isPremium;
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
 
+  const API_BASE = "http://localhost:4000";
+
+  const resolveImageUrl = (u) => {
+    if (!u) return "";
+    return u.startsWith("/uploads/") ? `${API_BASE}${u}` : u;
+  };
+
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>Editor: {event.title}</h1>
@@ -428,17 +415,16 @@ const canUsePremium = import.meta.env.DEV ? true : isPremium;
 
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
-  disabled={!canUsePremium}
-  onClick={addGalleryBlock}
-  style={{
-    opacity: canUsePremium ? 1 : 0.5,
-    cursor: canUsePremium ? "pointer" : "not-allowed",
-  }}
-  title={!canUsePremium ? "Disponibile solo con Premium" : ""}
->
-  + Gallery {canUsePremium ? "" : "🔒 Premium (7€)"}
-</button>
-
+            disabled={!canUsePremium}
+            onClick={addGalleryBlock}
+            style={{
+              opacity: canUsePremium ? 1 : 0.5,
+              cursor: canUsePremium ? "pointer" : "not-allowed",
+            }}
+            title={!canUsePremium ? "Disponibile solo con Premium" : ""}
+          >
+            + Gallery {canUsePremium ? "" : "🔒 Premium (7€)"}
+          </button>
 
           {/* qui in futuro aggiungi altri premium:
         <button disabled={!isPremium} onClick={addTableauBlock}>
@@ -599,176 +585,232 @@ const canUsePremium = import.meta.env.DEV ? true : isPremium;
         }
 
         if (block.type === "rsvp") {
-  return (
-    <div
-      key={block.id}
-      draggable
-      onDragStartCapture={(e) => {
-        if (e.target.closest("input, textarea, select, button, a")) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }}
-      onDragStart={(e) => onDragStart(e, block.id)}
-      onDragOver={(e) => onDragOver(e, block.id)}
-      onDragEnd={onDragEnd}
-      style={{
-        border: "1px dashed #666",
-        borderRadius: "8px",
-        padding: "1rem",
-        marginBottom: "1rem",
-        background: "#111",
-        cursor: draggingId === block.id ? "grabbing" : "grab",
-        userSelect: "none",
-      }}
-    >
-      <BlockHeader
-        type="rsvp"
-        onDelete={() => deleteBlock(block.id)}
-        onUp={() => moveBlock(block.id, "up")}
-        onDown={() => moveBlock(block.id, "down")}
-        disableUp={index === 0}
-        disableDown={index === lastIndex}
-      />
-
-      <strong>RSVP attivo per questo evento</strong>
-      <p style={{ marginTop: "0.5rem" }}>
-        Il modulo di conferma presenza sarà visibile nella pagina pubblica.
-      </p>
-
-      <button onClick={removeRsvpBlock} style={{ marginTop: "0.5rem" }}>
-        Rimuovi blocco RSVP
-      </button>
-    </div>
-  );
-}
-
-if (block.type === "gallery") {
-  const images = block.props?.images || [];
-
-  return (
-    <div
-      key={block.id}
-      draggable
-      onDragStartCapture={(e) => {
-        if (e.target.closest("input, textarea, select, button, a")) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }}
-      onDragStart={(e) => onDragStart(e, block.id)}
-      onDragOver={(e) => onDragOver(e, block.id)}
-      onDragEnd={onDragEnd}
-      style={{
-        border: "1px solid #444",
-        borderRadius: "8px",
-        padding: "1rem",
-        marginBottom: "1rem",
-        background: "#141414",
-        cursor: draggingId === block.id ? "grabbing" : "grab",
-        userSelect: "none",
-      }}
-    >
-      <BlockHeader
-        type="gallery"
-        onDelete={() => deleteBlock(block.id)}
-        onUp={() => moveBlock(block.id, "up")}
-        onDown={() => moveBlock(block.id, "down")}
-        disableUp={index === 0}
-        disableDown={index === lastIndex}
-      />
-
-      {/* Input URL immagine */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
-        <input
-          type="text"
-          placeholder="Incolla URL immagine (https://...)"
-          defaultValue=""
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addGalleryImage(block.id, e.currentTarget.value);
-              e.currentTarget.value = "";
-            }
-          }}
-          style={{ flex: 1, padding: "0.5rem" }}
-        />
-        <button
-          onClick={(e) => {
-            const input = e.currentTarget
-              .closest("div")
-              ?.querySelector("input");
-            if (!input) return;
-            addGalleryImage(block.id, input.value);
-            input.value = "";
-          }}
-        >
-          Aggiungi
-        </button>
-      </div>
-
-      {/* Lista preview */}
-      {images.length === 0 ? (
-        <p style={{ opacity: 0.7 }}>Nessuna immagine ancora. Incolla un link sopra.</p>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-            gap: "0.5rem",
-          }}
-        >
-          {images.map((url, i) => (
+          return (
             <div
-              key={`${block.id}-img-${i}`}
+              key={block.id}
+              draggable
+              onDragStartCapture={(e) => {
+                if (e.target.closest("input, textarea, select, button, a")) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              onDragStart={(e) => onDragStart(e, block.id)}
+              onDragOver={(e) => onDragOver(e, block.id)}
+              onDragEnd={onDragEnd}
               style={{
-                position: "relative",
-                borderRadius: "6px",
-                overflow: "hidden",
-                border: "1px solid #333",
-                background: "#0f0f0f",
+                border: "1px dashed #666",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+                background: "#111",
+                cursor: draggingId === block.id ? "grabbing" : "grab",
+                userSelect: "none",
               }}
             >
-              <img
-                src={url}
-                alt={`gallery-${i}`}
-                style={{ width: "100%", height: "120px", objectFit: "cover" }}
-                onError={(e) => {
-                  e.currentTarget.style.opacity = 0.35;
-                }}
+              <BlockHeader
+                type="rsvp"
+                onDelete={() => deleteBlock(block.id)}
+                onUp={() => moveBlock(block.id, "up")}
+                onDown={() => moveBlock(block.id, "down")}
+                disableUp={index === 0}
+                disableDown={index === lastIndex}
               />
-              <button
-                onClick={() => removeGalleryImage(block.id, i)}
-                style={{
-                  position: "absolute",
-                  top: 6,
-                  right: 6,
-                  background: "rgba(0,0,0,0.7)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "4px",
-                  padding: "2px 6px",
-                  cursor: "pointer",
-                  fontSize: "0.8rem",
-                }}
-                title="Rimuovi immagine"
-              >
-                ✕
+
+              <strong>RSVP attivo per questo evento</strong>
+              <p style={{ marginTop: "0.5rem" }}>
+                Il modulo di conferma presenza sarà visibile nella pagina
+                pubblica.
+              </p>
+
+              <button onClick={removeRsvpBlock} style={{ marginTop: "0.5rem" }}>
+                Rimuovi blocco RSVP
               </button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+          );
+        }
 
+        if (block.type === "gallery") {
+          const images = block.props?.images || [];
 
+          return (
+            <div
+              key={block.id}
+              draggable
+              onDragStartCapture={(e) => {
+                if (
+                  e.target.closest("input, textarea, select, button, a, label")
+                ) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              onDragStart={(e) => onDragStart(e, block.id)}
+              onDragOver={(e) => onDragOver(e, block.id)}
+              onDragEnd={onDragEnd}
+              style={{
+                border: "1px solid #444",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+                background: "#141414",
+                cursor: draggingId === block.id ? "grabbing" : "grab",
+                userSelect: "none",
+              }}
+            >
+              <BlockHeader
+                type="gallery"
+                onDelete={() => deleteBlock(block.id)}
+                onUp={() => moveBlock(block.id, "up")}
+                onDown={() => moveBlock(block.id, "down")}
+                disableUp={index === 0}
+                disableDown={index === lastIndex}
+              />
+
+              {/* Upload immagini (custom) */}
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label
+                  style={{
+                    display: "inline-block",
+                    padding: "0.5rem 0.8rem",
+                    background: "#000",
+                    color: "#fff",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Carica foto
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (!files.length) return;
+
+                      try {
+                        const formData = new FormData();
+                        files.forEach((file) =>
+                          formData.append("images", file)
+                        );
+
+                        const res = await fetch(
+                          "http://localhost:4000/api/uploads",
+                          {
+                            method: "POST",
+                            body: formData,
+                          }
+                        );
+                        if (!res.ok) throw new Error("Upload fallito");
+
+                        const data = await res.json();
+                        const urls = data.urls || [];
+
+                        setBlocks((prev) =>
+                          prev.map((b) =>
+                            b.id === block.id
+                              ? {
+                                  ...b,
+                                  props: {
+                                    ...b.props,
+                                    images: [
+                                      ...(b.props.images || []),
+                                      ...urls,
+                                    ],
+                                  },
+                                }
+                              : b
+                          )
+                        );
+                      } catch (err) {
+                        console.error(err);
+                        alert("Errore upload immagini");
+                      } finally {
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+
+                <small
+                  style={{
+                    opacity: 0.6,
+                    display: "block",
+                    marginTop: "0.35rem",
+                  }}
+                >
+                  Puoi selezionare più foto insieme.
+                </small>
+              </div>
+
+              {/* Preview thumbnails */}
+              {images.length === 0 ? (
+                <p style={{ opacity: 0.7 }}>Nessuna immagine ancora.</p>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.6rem",
+                    overflowX: "auto",
+                    paddingBottom: "0.25rem",
+                    scrollSnapType: "x mandatory",
+                  }}
+                >
+                  {images.map((url, i) => (
+                    <div
+                      key={`${block.id}-img-${i}`}
+                      style={{
+                        position: "relative",
+                        minWidth: "140px",
+                        height: "110px",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        border: "1px solid #2a2a2a",
+                        background: "#0f0f0f",
+                        scrollSnapAlign: "start",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={resolveImageUrl(url)}
+                        alt={`gallery-${i}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                        loading="lazy"
+                      />
+                      <button
+                        onClick={() => removeGalleryImage(block.id, i)}
+                        style={{
+                          position: "absolute",
+                          top: 6,
+                          right: 6,
+                          background: "rgba(0,0,0,0.7)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          padding: "2px 6px",
+                          cursor: "pointer",
+                          fontSize: "0.8rem",
+                        }}
+                        title="Rimuovi immagine"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
 
         return null;
       })}
-
-      
 
       <button onClick={handleSave} disabled={saving}>
         {saving ? "Salvataggio..." : "Salva evento"}

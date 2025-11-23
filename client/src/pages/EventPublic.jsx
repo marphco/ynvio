@@ -75,6 +75,10 @@ export default function EventPublic() {
     (a, b) => (a.order ?? 0) - (b.order ?? 0)
   );
 
+  const API_BASE = "http://localhost:4000";
+  const resolveImageUrl = (u) =>
+    u?.startsWith("/uploads/") ? `${API_BASE}${u}` : u;
+
   // ✅ FUNZIONE SOLO PER RENDERIZZARE RSVP (NO DUPLICAZIONE)
   const renderRsvpBlock = (key) => (
     <section key={key} style={{ marginTop: "2rem" }}>
@@ -266,7 +270,7 @@ export default function EventPublic() {
 
           // ✅ BLOCCO GALLERY
           if (block.type === "gallery") {
-            const images = block.props?.images || [];
+            const images = (block.props?.images || []).map(resolveImageUrl);
 
             return (
               <section
@@ -287,41 +291,38 @@ export default function EventPublic() {
                 ) : (
                   <div
                     style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(140px, 1fr))",
+                      display: "flex",
                       gap: "0.6rem",
+                      overflowX: "auto",
+                      paddingBottom: "0.25rem",
+                      scrollSnapType: "x mandatory",
                     }}
                   >
                     {images.map((url, i) => (
-                      <a
+                      <div
                         key={`${block.id}-pub-img-${i}`}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
                         style={{
-                          display: "block",
+                          minWidth: "170px",
+                          height: "120px",
                           borderRadius: "8px",
                           overflow: "hidden",
                           border: "1px solid #2a2a2a",
                           background: "#0f0f0f",
+                          scrollSnapAlign: "start",
+                          flexShrink: 0,
                         }}
-                        title="Apri immagine"
                       >
                         <img
                           src={url}
                           alt={`gallery-${i}`}
                           style={{
                             width: "100%",
-                            height: "160px",
+                            height: "100%",
                             objectFit: "cover",
                           }}
                           loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.opacity = 0.35;
-                          }}
                         />
-                      </a>
+                      </div>
                     ))}
                   </div>
                 )}

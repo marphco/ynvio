@@ -1,15 +1,26 @@
+import path from "path";
+import fs from "fs";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
 import eventRoutes from "./routes/eventRoutes.js";
 import rsvpRoutes from "./routes/rsvpRoutes.js";
+import uploadsRouter from "./routes/uploads.js";
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/api/uploads", uploadsRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "YNVIO API is running" });
