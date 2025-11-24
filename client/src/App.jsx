@@ -9,7 +9,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
-      <Route path="/" element={<NewEvent />} />
+      <Route path="/new" element={<NewEvent />} />
       <Route path="/e/:slug" element={<EventPublic />} />
       <Route path="/edit/:slug" element={<EventEditor />} />
       <Route path="/rsvps/:slug" element={<EventRsvps />} />

@@ -818,7 +818,7 @@ export default function EventEditor() {
                           formData.append("images", file)
                         );
 
-                        const res = await fetch(`${API_BASE}/api/uploads`, {
+                        const res = await fetch(`${API_BASE}/api/uploads?slug=${slug}`, {
                           method: "POST",
                           body: formData,
                         });

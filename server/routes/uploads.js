@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import Event from "../models/Event.js"; // ✅ aggiungi questo
 
 const router = express.Router();
 
@@ -38,24 +39,36 @@ const upload = multer({
   },
 });
 
-// 5) route con middleware multer "pulito"
-router.post("/", (req, res) => {
-  console.log("UPLOAD CT:", req.headers["content-type"]);
+// ✅ 5) MIDDLEWARE PREMIUM: QUI VA IL TUO CODICE
+const requirePremiumForGalleryUpload = async (req, res, next) => {
+  try {
+    const { slug } = req.query;
+    if (!slug) return res.status(400).json({ error: "Missing slug" });
 
-  upload.array("images", 20)(req, res, (err) => {
-    if (err) {
-      console.error("UPLOAD ERROR:", err);
-      return res.status(400).json({
-        error: err.message || "Errore durante l'upload.",
-        code: err.code,
-      });
+    const ev = await Event.findOne({ slug });
+    if (!ev) return res.status(404).json({ error: "Evento non trovato" });
+
+    const isPremium = (ev.plan || "free").toLowerCase() === "premium";
+    if (!isPremium) {
+      return res.status(403).json({ error: "Gallery solo Premium" });
     }
 
-    console.log("FILES:", (req.files || []).length); // 👈 quanti ne arrivano davvero
+    next(); // ok, lascia andare multer
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ✅ 6) ROUTE PULITA: middleware -> multer -> handler
+router.post(
+  "/",
+  requirePremiumForGalleryUpload,
+  upload.array("images", 20),
+  (req, res) => {
     const files = req.files || [];
     const urls = files.map((f) => `/uploads/${f.filename}`);
     return res.json({ urls });
-  });
-});
+  }
+);
 
 export default router;

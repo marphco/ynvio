@@ -118,17 +118,31 @@ router.put("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
     const { title, date, dateTBD, templateId, status, blocks } = req.body;
-    const { plan } = req.body;
 
+    // 1) prendo evento esistente per sapere che plan ha davvero
+    const existing = await Event.findOne({ slug });
+    if (!existing) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+
+    const plan = (existing.plan || "free").toLowerCase();
+    const isPremium = plan === "premium";
+
+    // 2) se NON premium, elimino dal payload tutti i blocchi gallery
+    let safeBlocks = Array.isArray(blocks) ? blocks : [];
+    if (!isPremium) {
+      safeBlocks = safeBlocks.filter((b) => b.type !== "gallery");
+    }
+
+    // 3) preparo update normale
     const update = {
       ...(title !== undefined && { title }),
       ...(templateId !== undefined && { templateId }),
       ...(status !== undefined && { status }),
-      ...(blocks !== undefined && { blocks }),
-      ...(plan !== undefined && { plan }),
+      ...(blocks !== undefined && { blocks: safeBlocks }),
     };
 
-    // gestione data / TBD
+    // gestione data / TBD (uguale a prima)
     if (dateTBD === true) {
       update.dateTBD = true;
       update.date = null;
@@ -141,10 +155,6 @@ router.put("/:slug", async (req, res) => {
     }
 
     const event = await Event.findOneAndUpdate({ slug }, update, { new: true });
-
-    if (!event) {
-      return res.status(404).json({ message: "Evento non trovato" });
-    }
 
     res.json(event);
   } catch (error) {
