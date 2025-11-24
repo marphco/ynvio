@@ -345,8 +345,7 @@ export default function EventEditor() {
   const plan = (event?.plan || "").toLowerCase();
   const isPremium = plan === "premium";
 
-  // ✅ DEV OVERRIDE: in dev puoi testare premium anche su free
-  const canUsePremium = import.meta.env.DEV ? true : isPremium;
+  const canUsePremium = isPremium;
 
   const blockLabel = (type) => {
     if (type === "text") return "Blocco testo";

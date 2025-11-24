@@ -10,6 +10,7 @@ export default function Home() {
   const [dateTBD, setDateTBD] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [plan, setPlan] = useState("free");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,6 +27,7 @@ export default function Home() {
           dateTBD,
           templateId: "basic-free",
           blocks: [],
+          plan,
         }),
       });
 
@@ -114,6 +116,18 @@ export default function Home() {
         {error && (
           <p style={{ color: "salmon", marginTop: "0.5rem" }}>{error}</p>
         )}
+
+        <label>
+  Piano
+  <select
+    value={plan}
+    onChange={(e) => setPlan(e.target.value)}
+    style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+  >
+    <option value="free">Free</option>
+    <option value="premium">Premium</option>
+  </select>
+</label>
 
         <button
           type="submit"

@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import Event from "../models/Event.js"; // ✅ aggiungi questo
+import Event from "../models/Event.js"; // 👈 1) IMPORTA Event (serve per leggere il plan)
 
 const router = express.Router();
 
@@ -39,10 +39,13 @@ const upload = multer({
   },
 });
 
-// ✅ 5) MIDDLEWARE PREMIUM: QUI VA IL TUO CODICE
+
+// ======================================================
+// ✅ MIDDLEWARE PREMIUM CHECK
+// ======================================================
 const requirePremiumForGalleryUpload = async (req, res, next) => {
   try {
-    const { slug } = req.query;
+    const { slug } = req.query;                 // 👈 arriva da ?slug=...
     if (!slug) return res.status(400).json({ error: "Missing slug" });
 
     const ev = await Event.findOne({ slug });
@@ -53,21 +56,35 @@ const requirePremiumForGalleryUpload = async (req, res, next) => {
       return res.status(403).json({ error: "Gallery solo Premium" });
     }
 
-    next(); // ok, lascia andare multer
+    next(); // 👈 ok premium → fa passare multer
   } catch (err) {
     next(err);
   }
 };
 
-// ✅ 6) ROUTE PULITA: middleware -> multer -> handler
+// ======================================================
+// 5) route finale: middleware premium → multer → handler
+// ======================================================
 router.post(
   "/",
-  requirePremiumForGalleryUpload,
-  upload.array("images", 20),
+  requirePremiumForGalleryUpload,              // 👈 QUI
   (req, res) => {
-    const files = req.files || [];
-    const urls = files.map((f) => `/uploads/${f.filename}`);
-    return res.json({ urls });
+    console.log("UPLOAD CT:", req.headers["content-type"]);
+
+    upload.array("images", 20)(req, res, (err) => {
+      if (err) {
+        console.error("UPLOAD ERROR:", err);
+        return res.status(400).json({
+          error: err.message || "Errore durante l'upload.",
+          code: err.code,
+        });
+      }
+
+      console.log("FILES:", (req.files || []).length);
+      const files = req.files || [];
+      const urls = files.map((f) => `/uploads/${f.filename}`);
+      return res.json({ urls });
+    });
   }
 );
 
