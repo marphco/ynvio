@@ -7,9 +7,12 @@ export default function EventEditor() {
   const [event, setEvent] = useState(null);
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [uploadError, setUploadError] = useState("");
+  const [isDirty, setIsDirty] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [saveError, setSaveError] = useState("");
 
   const DRAFT_KEY = `ynvio:draft:${slug}`;
 
@@ -29,7 +32,7 @@ export default function EventEditor() {
   const hasRsvpBlock = (blocksArray) =>
     blocksArray.some((b) => b.type === "rsvp");
 
-    const loadDraft = () => {
+  const loadDraft = () => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (!raw) return null;
@@ -58,10 +61,9 @@ export default function EventEditor() {
   const clearDraft = () => {
     try {
       localStorage.removeItem(DRAFT_KEY);
-    // eslint-disable-next-line no-empty
+      // eslint-disable-next-line no-empty
     } catch {}
   };
-
 
   useEffect(() => {
     let cancelled = false;
@@ -79,16 +81,18 @@ export default function EventEditor() {
 
           setEvent(data);
 
-         // 👇 RESTORE draft se esiste
-         const draft = loadDraft();
-         if (draft && draft.blocks.length > 0) {
-           const restored = normalizeBlocks(draft.blocks);
-           setBlocks(restored);
-         } else {
-           setBlocks(cleanOrderedBlocks);
-         }
+          const draft = loadDraft();
+          const hasDraft = draft && draft.blocks.length > 0;
 
-         setDraftRestored(true);
+          if (hasDraft) {
+            const restored = normalizeBlocks(draft.blocks);
+            setBlocks(restored);
+          } else {
+            setBlocks(cleanOrderedBlocks);
+          }
+
+          setDraftRestored(true);
+          setIsDirty(hasDraft);
         }
       } catch (err) {
         console.error(err);
@@ -107,14 +111,15 @@ export default function EventEditor() {
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   useEffect(() => {
     if (!draftRestored) return; // non salvare prima del restore iniziale
+    if (!isDirty) return; // ✅ salva draft solo se ci sono modifiche non salvate
     saveDraft(blocks);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, draftRestored]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, draftRestored, isDirty]);
 
   const addTextBlock = () => {
     setBlocks((prev) => [
@@ -129,7 +134,21 @@ export default function EventEditor() {
         },
       },
     ]);
+    setIsDirty(true);
   };
+
+  useEffect(() => {
+    if (!draftRestored) return;
+    if (!isDirty) return; // se non c’è nulla da salvare
+    if (autoSaving) return; // evita loop mentre salva
+
+    const t = setTimeout(() => {
+      saveToServer(blocks);
+    }, 1200); // 1.2s di “pausa”
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, isDirty, autoSaving, draftRestored]);
 
   const addRsvpBlock = () => {
     if (hasRsvpBlock(blocks)) {
@@ -146,6 +165,7 @@ export default function EventEditor() {
         props: {},
       },
     ]);
+    setIsDirty(true);
   };
 
   const removeRsvpBlock = () => {
@@ -170,6 +190,7 @@ export default function EventEditor() {
         },
       },
     ]);
+    setIsDirty(true);
   };
 
   const removeGalleryImage = (blockId, indexToRemove) => {
@@ -204,6 +225,7 @@ export default function EventEditor() {
         },
       },
     ]);
+    setIsDirty(true);
   };
 
   const updateBlockProp = (id, field, value) => {
@@ -214,6 +236,7 @@ export default function EventEditor() {
           : block
       )
     );
+    setIsDirty(true);
   };
 
   // sposta un blocco su/giù mantenendo coerenza
@@ -232,6 +255,7 @@ export default function EventEditor() {
 
       return next.map((b, i) => ({ ...b, order: i }));
     });
+    setIsDirty(true);
   };
 
   const onDragStart = (e, id) => {
@@ -247,10 +271,14 @@ export default function EventEditor() {
       const from = ordered.findIndex((b) => b.id === draggingId);
       const to = ordered.findIndex((b) => b.id === overId);
       if (from === -1 || to === -1) return prev;
+      if (from === to) return prev;
 
       const next = [...ordered];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
+
+      // 👇 qui il reorder è reale → dirty true
+      setIsDirty(true);
 
       return next.map((b, i) => ({ ...b, order: i }));
     });
@@ -263,43 +291,51 @@ export default function EventEditor() {
     setBlocks((prev) =>
       prev.filter((b) => b.id !== id).map((b, i) => ({ ...b, order: i }))
     );
+    setIsDirty(true);
   };
 
   const handleSave = async () => {
+    await saveToServer(blocks);
+  };
+
+  const saveToServer = async (blocksToSave) => {
     if (!event) return;
-    setSaving(true);
-    const cleanBlocks = [...blocks]
+
+    setAutoSaving(true);
+    setSaveError("");
+
+    const cleanBlocks = [...blocksToSave]
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .map((b, i) => ({ ...b, order: i }));
+
     try {
       const res = await fetch(`${API_BASE}/api/events/${slug}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: event.title,
-          date: event.date, // può essere null
-          dateTBD: event.dateTBD, // 👈 AGGIUNGI QUESTA
+          date: event.date,
+          dateTBD: event.dateTBD,
           templateId: event.templateId,
           status: event.status,
           blocks: cleanBlocks,
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("Errore salvataggio evento");
-      }
+      if (!res.ok) throw new Error("Errore salvataggio evento");
 
       const updated = await res.json();
+
       setEvent(updated);
       setBlocks(normalizeBlocks(updated.blocks || []));
-      clearDraft(); // ✅ draft non serve più perché DB è aggiornato
+      setIsDirty(false);
+      setLastSavedAt(Date.now());
+      clearDraft(); // baby step 1
     } catch (err) {
       console.error(err);
-      alert("Errore durante il salvataggio");
+      setSaveError("Impossibile salvare ora. Riprova tra poco.");
     } finally {
-      setSaving(false);
+      setAutoSaving(false);
     }
   };
 
@@ -393,6 +429,41 @@ export default function EventEditor() {
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       <h1>Editor: {event.title}</h1>
+
+      <div
+        style={{
+          marginTop: "0.75rem",
+          marginBottom: "1rem",
+          padding: "0.6rem 0.8rem",
+          borderRadius: "8px",
+          background: "#0d0d0d",
+          border: "1px solid #222",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.6rem",
+          fontSize: "0.9rem",
+        }}
+      >
+        {autoSaving ? (
+          <span style={{ color: "#ffb74d" }}>Salvataggio…</span>
+        ) : isDirty ? (
+          <span style={{ color: "salmon" }}>Non salvato</span>
+        ) : (
+          <span style={{ color: "lightgreen" }}>Salvato ✅</span>
+        )}
+
+        {lastSavedAt && !isDirty && !autoSaving && (
+          <span style={{ opacity: 0.6 }}>
+            ({new Date(lastSavedAt).toLocaleTimeString("it-IT")})
+          </span>
+        )}
+
+        {saveError && (
+          <span style={{ color: "salmon", marginLeft: "auto" }}>
+            {saveError}
+          </span>
+        )}
+      </div>
 
       <label style={{ display: "block", margin: "1rem 0" }}>
         Data evento
@@ -890,8 +961,8 @@ export default function EventEditor() {
         return null;
       })}
 
-      <button onClick={handleSave} disabled={saving}>
-        {saving ? "Salvataggio..." : "Salva evento"}
+      <button onClick={handleSave} disabled={autoSaving}>
+        {autoSaving ? "Salvataggio..." : "Salva ora"}
       </button>
     </div>
   );
