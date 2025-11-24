@@ -25,7 +25,7 @@ export default function Home() {
           title,
           date: dateTBD ? null : new Date(date).toISOString(),
           dateTBD,
-          templateId: "basic-free",
+          templateId: plan === "premium" ? "basic-premium" : "basic-free",
           blocks: [],
           plan,
         }),

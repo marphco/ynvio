@@ -46,19 +46,26 @@ export default function EventEditor() {
     }
   };
 
-  const saveDraft = (blocksToSave) => {
+  const saveDraft = (blocksToSave, eventToSave) => {
     try {
       localStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
           blocks: blocksToSave,
+          event: eventToSave,
           savedAt: Date.now(),
         })
       );
     } catch {
-      // se LS è pieno o errore, ignoriamo per MVP
+      // ignore MVP
     }
   };
+
+  useEffect(() => {
+    if (!draftRestored || !isDirty) return;
+    saveDraft(blocks, event);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocks, event, draftRestored, isDirty]);
 
   const clearDraft = () => {
     try {
@@ -87,10 +94,17 @@ export default function EventEditor() {
           const hasDraft = draft && draft.blocks.length > 0;
 
           if (hasDraft) {
-            const restored = normalizeBlocks(draft.blocks);
-            setBlocks(restored);
+            const restoredBlocks = normalizeBlocks(draft.blocks);
+            setBlocks(restoredBlocks);
+
+            if (draft.event) {
+              setEvent(draft.event); // ✅ ripristina anche data/titolo se esiste
+            } else {
+              setEvent(data); // fallback
+            }
           } else {
             setBlocks(cleanOrderedBlocks);
+            setEvent(data);
           }
 
           setDraftRestored(true);
@@ -117,11 +131,17 @@ export default function EventEditor() {
   }, [slug]);
 
   useEffect(() => {
-    if (!draftRestored) return; // non salvare prima del restore iniziale
-    if (!isDirty) return; // ✅ salva draft solo se ci sono modifiche non salvate
-    saveDraft(blocks);
+    if (!draftRestored) return;
+    if (!isDirty) return;
+    if (autoSaving) return;
+
+    const t = setTimeout(() => {
+      saveToServer(blocks);
+    }, 1200);
+
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, draftRestored, isDirty]);
+  }, [blocks, event, isDirty, autoSaving, draftRestored]);
 
   const addTextBlock = () => {
     setBlocks((prev) => [
@@ -138,19 +158,6 @@ export default function EventEditor() {
     ]);
     setIsDirty(true);
   };
-
-  useEffect(() => {
-    if (!draftRestored) return;
-    if (!isDirty) return; // se non c’è nulla da salvare
-    if (autoSaving) return; // evita loop mentre salva
-
-    const t = setTimeout(() => {
-      saveToServer(blocks);
-    }, 1200); // 1.2s di “pausa”
-
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, isDirty, autoSaving, draftRestored]);
 
   const addRsvpBlock = () => {
     if (hasRsvpBlock(blocks)) {
@@ -171,7 +178,9 @@ export default function EventEditor() {
   };
 
   const removeRsvpBlock = () => {
-    setBlocks((prev) => prev.filter((b) => b.type !== "rsvp"));
+    setBlocks((prev) =>
+      prev.filter((b) => b.type !== "rsvp").map((b, i) => ({ ...b, order: i }))
+    );
     setIsDirty(true);
   };
 
@@ -577,13 +586,14 @@ export default function EventEditor() {
         <input
           type="checkbox"
           checked={event.dateTBD}
-          onChange={(e) =>
+          onChange={(e) => {
             setEvent((prev) => ({
               ...prev,
               dateTBD: e.target.checked,
               date: e.target.checked ? null : prev.date,
-            }))
-          }
+            }));
+            setIsDirty(true);
+          }}
         />
         Data da definire
       </label>
