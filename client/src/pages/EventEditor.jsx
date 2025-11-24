@@ -13,6 +13,8 @@ export default function EventEditor() {
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [saveError, setSaveError] = useState("");
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState("");
 
   const DRAFT_KEY = `ynvio:draft:${slug}`;
 
@@ -170,12 +172,13 @@ export default function EventEditor() {
 
   const removeRsvpBlock = () => {
     setBlocks((prev) => prev.filter((b) => b.type !== "rsvp"));
+    setIsDirty(true);
   };
 
   const addGalleryBlock = () => {
-    // doppia sicurezza: anche se il button è disabled
     if (!canUsePremium) {
-      alert("La Gallery è disponibile solo per Premium.");
+      setUpgradeReason("gallery");
+      setShowUpgrade(true);
       return;
     }
 
@@ -185,9 +188,7 @@ export default function EventEditor() {
         id: crypto.randomUUID(),
         type: "gallery",
         order: prev.length,
-        props: {
-          images: [],
-        },
+        props: { images: [] },
       },
     ]);
     setIsDirty(true);
@@ -209,6 +210,7 @@ export default function EventEditor() {
           : b
       )
     );
+    setIsDirty(true);
   };
 
   const addMapBlock = () => {
@@ -277,11 +279,9 @@ export default function EventEditor() {
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
 
-      // 👇 qui il reorder è reale → dirty true
-      setIsDirty(true);
-
       return next.map((b, i) => ({ ...b, order: i }));
     });
+    setIsDirty(true);
   };
 
   const onDragEnd = () => setDraggingId(null);
@@ -427,6 +427,95 @@ export default function EventEditor() {
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      {showUpgrade && (
+        <div
+          onClick={() => setShowUpgrade(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "1rem",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              background: "#0f0f0f",
+              border: "1px solid #222",
+              borderRadius: "12px",
+              padding: "1.25rem",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              {upgradeReason === "upload"
+                ? "Caricamento foto Premium ⭐"
+                : "Sblocca la Gallery ⭐"}
+            </h3>
+
+            <p style={{ opacity: 0.85, lineHeight: 1.5 }}>
+              {upgradeReason === "upload"
+                ? "Per caricare foto devi passare a Premium."
+                : "La Gallery è un add-on Premium: ti permette di caricare foto e mostrarle nella pagina invito."}
+            </p>
+
+            <ul style={{ opacity: 0.85, paddingLeft: "1.2rem" }}>
+              <li>Caricamento foto illimitato (per evento)</li>
+              <li>Slider ricordi nella pagina pubblica</li>
+              <li>Esperienza più “wow” per gli invitati</li>
+            </ul>
+
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+              <button
+                onClick={() => {
+                  // baby-step: per ora solo UX, niente pagamento reale
+                  alert("Qui in futuro apriamo checkout Premium 🙂");
+                  setShowUpgrade(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "0.75rem",
+                  background: "#f5c542",
+                  color: "#000",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Passa a Premium · 7€
+              </button>
+
+              <button
+                onClick={() => setShowUpgrade(false)}
+                style={{
+                  padding: "0.75rem",
+                  background: "transparent",
+                  color: "#fff",
+                  border: "1px solid #333",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                Non ora
+              </button>
+            </div>
+
+            <small
+              style={{ display: "block", marginTop: "0.75rem", opacity: 0.6 }}
+            >
+              Puoi fare upgrade quando vuoi, senza perdere modifiche.
+            </small>
+          </div>
+        </div>
+      )}
+
       <h1>Editor: {event.title}</h1>
 
       <div
@@ -470,15 +559,16 @@ export default function EventEditor() {
           type="date"
           disabled={event.dateTBD}
           value={event.date ? event.date.slice(0, 10) : ""}
-          onChange={(e) =>
+          onChange={(e) => {
             setEvent((prev) => ({
               ...prev,
               date: e.target.value
                 ? new Date(e.target.value).toISOString()
                 : null,
               dateTBD: false,
-            }))
-          }
+            }));
+            setIsDirty(true);
+          }}
           style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
         />
       </label>
@@ -534,11 +624,10 @@ export default function EventEditor() {
 
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
-            disabled={!canUsePremium}
             onClick={addGalleryBlock}
             style={{
               opacity: canUsePremium ? 1 : 0.5,
-              cursor: canUsePremium ? "pointer" : "not-allowed",
+              cursor: canUsePremium ? "pointer" : "pointer", // resta cliccabile
             }}
             title={!canUsePremium ? "Disponibile solo con Premium" : ""}
           >
@@ -817,15 +906,24 @@ export default function EventEditor() {
                           formData.append("images", file)
                         );
 
-                        const res = await fetch(`${API_BASE}/api/uploads?slug=${slug}`, {
-                          method: "POST",
-                          body: formData,
-                        });
+                        const res = await fetch(
+                          `${API_BASE}/api/uploads?slug=${slug}`,
+                          {
+                            method: "POST",
+                            body: formData,
+                          }
+                        );
 
                         if (!res.ok) {
                           const errData = await res.json().catch(() => ({}));
 
-                          // 👇 messaggi MVP
+                          if (res.status === 403) {
+                            setUploadError("");
+                            setUpgradeReason("upload");
+                            setShowUpgrade(true);
+                            return;
+                          }
+
                           if (errData.code === "LIMIT_FILE_SIZE") {
                             throw new Error(
                               "Ogni immagine deve pesare massimo 15MB."
