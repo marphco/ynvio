@@ -15,6 +15,7 @@ export default function EventEditor() {
   const [saveError, setSaveError] = useState("");
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
+  const [pendingPremiumAction, setPendingPremiumAction] = useState(null);
 
   const DRAFT_KEY = `ynvio:draft:${slug}`;
 
@@ -186,6 +187,7 @@ export default function EventEditor() {
 
   const addGalleryBlock = () => {
     if (!canUsePremium) {
+      setPendingPremiumAction("gallery"); // 👈 ricordiamo cosa voleva fare
       setUpgradeReason("gallery");
       setShowUpgrade(true);
       return;
@@ -310,6 +312,10 @@ export default function EventEditor() {
   const saveToServer = async (blocksToSave) => {
     if (!event) return;
 
+    // ✅ plan locale PRIMA della fetch (così non lo perdi)
+    const localPlanBefore = (event.plan || "").toLowerCase();
+    const isLocalPremium = localPlanBefore === "premium";
+
     setAutoSaving(true);
     setSaveError("");
 
@@ -327,6 +333,7 @@ export default function EventEditor() {
           dateTBD: event.dateTBD,
           templateId: event.templateId,
           status: event.status,
+          plan: event.plan,
           blocks: cleanBlocks,
         }),
       });
@@ -335,11 +342,22 @@ export default function EventEditor() {
 
       const updated = await res.json();
 
-      setEvent(updated);
-      setBlocks(normalizeBlocks(updated.blocks || []));
+      // ✅ tieni premium locale anche se server non lo manda
+      setEvent({
+        ...updated,
+        plan: isLocalPremium ? "premium" : updated.plan || event.plan,
+      });
+
+      // ✅ se premium locale → NON sovrascrivere blocchi con server
+      if (isLocalPremium) {
+        setBlocks(normalizeBlocks(cleanBlocks));
+      } else {
+        setBlocks(normalizeBlocks(updated.blocks || []));
+      }
+
       setIsDirty(false);
       setLastSavedAt(Date.now());
-      clearDraft(); // baby step 1
+      clearDraft();
     } catch (err) {
       console.error(err);
       setSaveError("Impossibile salvare ora. Riprova tra poco.");
@@ -483,9 +501,25 @@ export default function EventEditor() {
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
               <button
                 onClick={() => {
-                  // baby-step: per ora solo UX, niente pagamento reale
-                  alert("Qui in futuro apriamo checkout Premium 🙂");
+                  // baby-step UX: upgrade finto ma sblocca subito
+                  setEvent((prev) => ({ ...prev, plan: "premium" }));
                   setShowUpgrade(false);
+
+                  // se stava cercando di aggiungere gallery → aggiungila ora
+                  if (pendingPremiumAction === "gallery") {
+                    setBlocks((prev) => [
+                      ...prev,
+                      {
+                        id: crypto.randomUUID(),
+                        type: "gallery",
+                        order: prev.length,
+                        props: { images: [] },
+                      },
+                    ]);
+                    setIsDirty(true);
+                  }
+
+                  setPendingPremiumAction(null);
                 }}
                 style={{
                   flex: 1,
@@ -929,6 +963,7 @@ export default function EventEditor() {
 
                           if (res.status === 403) {
                             setUploadError("");
+                            setPendingPremiumAction("upload"); // 👈 ricordiamo che voleva caricare
                             setUpgradeReason("upload");
                             setShowUpgrade(true);
                             return;

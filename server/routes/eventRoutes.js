@@ -117,32 +117,35 @@ router.get("/:slug/rsvps", async (req, res) => {
 router.put("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
-    const { title, date, dateTBD, templateId, status, blocks } = req.body;
+    const { title, date, dateTBD, templateId, status, blocks, plan } = req.body;
 
-    // 1) prendo evento esistente per sapere che plan ha davvero
+    // 1) evento esistente
     const existing = await Event.findOne({ slug });
     if (!existing) {
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    const plan = (existing.plan || "free").toLowerCase();
-    const isPremium = plan === "premium";
+    // 2) plan "target": se dal client arriva plan, uso quello.
+    //    altrimenti tengo quello già in DB.
+    const targetPlan = (plan ?? existing.plan ?? "free").toLowerCase();
+    const isPremium = targetPlan === "premium";
 
-    // 2) se NON premium, elimino dal payload tutti i blocchi gallery
+    // 3) se NON premium, elimino dal payload tutti i blocchi gallery
     let safeBlocks = Array.isArray(blocks) ? blocks : [];
     if (!isPremium) {
       safeBlocks = safeBlocks.filter((b) => b.type !== "gallery");
     }
 
-    // 3) preparo update normale
+    // 4) preparo update
     const update = {
       ...(title !== undefined && { title }),
       ...(templateId !== undefined && { templateId }),
       ...(status !== undefined && { status }),
       ...(blocks !== undefined && { blocks: safeBlocks }),
+      ...(plan !== undefined && { plan: targetPlan }), // ✅ SALVA PLAN
     };
 
-    // gestione data / TBD (uguale a prima)
+    // gestione data / TBD
     if (dateTBD === true) {
       update.dateTBD = true;
       update.date = null;
